@@ -281,7 +281,7 @@ impl Outbox {
 
     /// Replaces a draft's or an approved message's content. Any approval is
     /// void: the message is a draft again.
-    pub async fn edit(&self, tenant: TenantId, id: MessageId, email: &Email) -> Result<(), OutboxError> {
+    pub async fn edit(&self, tenant: TenantId, id: MessageId, email: &Email, editor: &str) -> Result<(), OutboxError> {
         validate(email)?;
         let now = self.clock.now();
         let mut tx = self.pool.begin().await?;
@@ -307,7 +307,7 @@ impl Outbox {
         .await?;
         let ev = AuditEvent {
             details: json!({ "approval_voided": status == MessageStatus::Approved }),
-            ..event(tenant, now, audit::SYSTEM, "outbox.edited", id)
+            ..event(tenant, now, editor, "outbox.edited", id)
         };
         audit::record(&mut *tx, &ev).await?;
         tx.commit().await?;
