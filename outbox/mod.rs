@@ -179,6 +179,9 @@ pub enum OutboxError {
     /// A pre-send check refused the message (D7); the reason says why.
     #[error("can't approve: {0}")]
     CheckFailed(String),
+    /// A pre-send check couldn't run; nothing changed, try again.
+    #[error("couldn't check the message; try again: {0}")]
+    CheckUnavailable(String),
     /// The Draft's deadline passed before it was approved (D4).
     #[error("this draft expired at its deadline and can't be sent")]
     Expired,
@@ -334,7 +337,10 @@ impl Outbox {
         }
         checks::run(product_checks, tenant, id, &checked.email)
             .await
-            .map_err(|CheckFailed(reason)| OutboxError::CheckFailed(reason))?;
+            .map_err(|failed| match failed {
+                CheckFailed::Refused(reason) => OutboxError::CheckFailed(reason),
+                CheckFailed::Unavailable(reason) => OutboxError::CheckUnavailable(reason),
+            })?;
         let now = self.clock.now();
         let mut tx = self.pool.begin().await?;
         let (status, current) = lock(&mut tx, tenant, id).await?;

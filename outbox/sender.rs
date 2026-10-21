@@ -206,15 +206,27 @@ impl<M: Mailer> Sender<M> {
             .await?;
             return Ok(Claim::Refused);
         }
-        if let Err(CheckFailed(reason)) = checks::run(self.product_checks.as_ref(), tenant, id, &email).await {
-            report.blocked += 1;
-            refuse(tx, tenant, id, now, MessageStatus::Blocked, &reason).await?;
-            return Ok(Claim::Refused);
-        }
+        // Before the pre-send check: a message that may already have gone
+        // out needs a person whatever the check would say now.
         if row.may_have_sent && !self.may_retry_unknown(row.first_send_at, now) {
             report.unconfirmed += 1;
             refuse(tx, tenant, id, now, MessageStatus::Unconfirmed, UNCONFIRMED_REASON).await?;
             return Ok(Claim::Refused);
+        }
+        match checks::run(self.product_checks.as_ref(), tenant, id, &email).await {
+            Ok(()) => {}
+            Err(CheckFailed::Refused(reason)) => {
+                report.blocked += 1;
+                refuse(tx, tenant, id, now, MessageStatus::Blocked, &reason).await?;
+                return Ok(Claim::Refused);
+            }
+            Err(CheckFailed::Unavailable(reason)) => {
+                // Not the message's fault: try again shortly, without
+                // counting an attempt.
+                report.failed += 1;
+                defer(tx, tenant, id, now + backoff(1), &reason).await?;
+                return Ok(Claim::Refused);
+            }
         }
 
         let first_send_at = row.first_send_at.unwrap_or(now);
@@ -407,3 +419,25 @@ fn failpoint(name: &str) {
 
 #[cfg(not(feature = "failpoints"))]
 fn failpoint(_name: &str) {}
+
+/// Leaves a message for a later attempt after its pre-send check couldn't
+/// run. It keeps its approval and attempt count.
+async fn defer(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant: TenantId,
+    id: MessageId,
+    retry_at: OffsetDateTime,
+    reason: &str,
+) -> Result<(), OutboxError> {
+    sqlx::query!(
+        "update outbox_messages set status = 'failed', retry_at = $3, last_error = $4, updated_at = $3
+         where id = $1 and tenant_id = $2",
+        id.as_uuid(),
+        tenant.as_uuid(),
+        retry_at,
+        format!("couldn't run the pre-send check: {reason}"),
+    )
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}

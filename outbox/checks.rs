@@ -15,9 +15,14 @@ use crate::engine::mail::Email;
 /// The longest body the outbox sends, in characters.
 pub const MAX_BODY_CHARS: usize = 2_000;
 
-/// Why a message may not go out, in words for the person who approved it.
+/// Why a message didn't pass, in words for the person who approved it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CheckFailed(pub String);
+pub enum CheckFailed {
+    /// The message breaks a rule; it must not go out as it is.
+    Refused(String),
+    /// The check itself couldn't run (say, a database timeout); try later.
+    Unavailable(String),
+}
 
 /// A boxed future, so checks can be shared as `dyn PreSendCheck`.
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -54,15 +59,15 @@ pub(super) async fn run(
     email: &Email,
 ) -> Result<(), CheckFailed> {
     if email.body_text.trim().is_empty() {
-        return Err(CheckFailed("the message is empty".to_owned()));
+        return Err(CheckFailed::Refused("the message is empty".to_owned()));
     }
     if email.body_text.chars().count() > MAX_BODY_CHARS {
-        return Err(CheckFailed(format!(
+        return Err(CheckFailed::Refused(format!(
             "the message is longer than {MAX_BODY_CHARS} characters"
         )));
     }
     if links(&email.body_text).len() > 1 {
-        return Err(CheckFailed("the message has more than one link".to_owned()));
+        return Err(CheckFailed::Refused("the message has more than one link".to_owned()));
     }
     product.check(tenant, id, email).await
 }
