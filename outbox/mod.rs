@@ -203,6 +203,17 @@ pub struct Outbox {
     clock: Arc<dyn Clock>,
 }
 
+/// A message the provider accepted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SentMessage {
+    /// The message.
+    pub id: MessageId,
+    /// Whose it is.
+    pub tenant: TenantId,
+    /// Who it went to.
+    pub to_address: String,
+}
+
 impl Outbox {
     /// An outbox on `pool`, reading time from `clock`.
     pub fn new(pool: PgPool, clock: Arc<dyn Clock>) -> Self {
@@ -395,6 +406,23 @@ impl Outbox {
         audit::record(&mut *tx, &event(tenant, now, actor, "outbox.cancelled", id)).await?;
         tx.commit().await?;
         Ok(())
+    }
+
+    /// The message the provider knows as `provider_message_id`, if we sent
+    /// one: how a delivery event (G3) finds its tenant. The provider's ID
+    /// names the tenant, so this one lookup isn't scoped by one.
+    pub async fn find_sent(&self, provider_message_id: &str) -> Result<Option<SentMessage>, OutboxError> {
+        let row = sqlx::query!(
+            "select id, tenant_id, to_address from outbox_messages where provider_message_id = $1",
+            provider_message_id,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|row| SentMessage {
+            id: row.id.into(),
+            tenant: row.tenant_id.into(),
+            to_address: row.to_address,
+        }))
     }
 
     /// Expires every Draft past its deadline, across all tenants (a
