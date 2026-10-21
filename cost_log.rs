@@ -16,9 +16,13 @@ const PRICES: [(&str, u64, u64); 3] = [
     ("claude-opus-5-5", 4_000, 20_000),
 ];
 
-/// The cost of `usage` on `model`, or `None` for a model with no known price.
+/// The cost of `usage` on `model`, or `None` for a model with no known
+/// price. A dated snapshot (`claude-haiku-5-5-20261001`) costs the same as
+/// its model.
 pub fn cost_nano_usd(model: &str, usage: Usage) -> Option<i64> {
-    let (_, input, output) = PRICES.iter().find(|(name, _, _)| *name == model)?;
+    let (_, input, output) = PRICES
+        .iter()
+        .find(|(name, _, _)| model == *name || model.strip_prefix(name).is_some_and(|rest| rest.starts_with('-')))?;
     let total = u64::from(usage.input_tokens) * input + u64::from(usage.output_tokens) * output;
     i64::try_from(total).ok()
 }
@@ -63,6 +67,10 @@ pub struct LlmCall {
 
 /// Records one call.
 pub async fn record(executor: impl PgExecutor<'_>, call: &LlmCall) -> Result<(), sqlx::Error> {
+    let cost = cost_nano_usd(&call.model, call.usage);
+    if cost.is_none() {
+        tracing::warn!(model = %call.model, "no price for this model; its calls count as US$0 in cost reports");
+    }
     sqlx::query!(
         "insert into llm_calls (id, tenant_id, at, model, input_tokens, output_tokens, cost_nano_usd, request_id, outcome)
          values ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
@@ -72,7 +80,7 @@ pub async fn record(executor: impl PgExecutor<'_>, call: &LlmCall) -> Result<(),
         call.model,
         i32::try_from(call.usage.input_tokens).unwrap_or(i32::MAX),
         i32::try_from(call.usage.output_tokens).unwrap_or(i32::MAX),
-        cost_nano_usd(&call.model, call.usage),
+        cost,
         call.request_id,
         call.outcome.as_str(),
     )
