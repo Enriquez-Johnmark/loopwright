@@ -15,6 +15,7 @@ use serde_json::json;
 use sqlx::{Connection, PgConnection, PgPool, Postgres, Transaction};
 use time::{Duration, OffsetDateTime};
 
+use super::checks::{self, CheckFailed, PreSendCheck};
 use super::{ContentHash, MessageStatus, OutboxError, event};
 use crate::engine::audit::{self, AuditEvent};
 use crate::engine::clock::Clock;
@@ -39,7 +40,8 @@ pub struct DrainReport {
     pub sent: usize,
     /// Messages that failed (some will retry).
     pub failed: usize,
-    /// Messages refused because their content no longer matched the approval.
+    /// Messages refused because their content no longer matched the
+    /// approval, or a pre-send check failed (D7).
     pub blocked: usize,
     /// Messages that may or may not have gone out and need a person.
     pub unconfirmed: usize,
@@ -50,6 +52,7 @@ pub struct Sender<M> {
     pool: PgPool,
     mailer: M,
     clock: Arc<dyn Clock>,
+    product_checks: Arc<dyn PreSendCheck>,
 }
 
 /// A message this sender has marked `sending` and now owns.
@@ -75,9 +78,15 @@ struct NextStep {
 }
 
 impl<M: Mailer> Sender<M> {
-    /// A sender on `pool` using `mailer`.
-    pub fn new(pool: PgPool, mailer: M, clock: Arc<dyn Clock>) -> Self {
-        Self { pool, mailer, clock }
+    /// A sender on `pool` using `mailer`, checking every message against
+    /// the engine's rules and `product_checks` just before sending (D7).
+    pub fn new(pool: PgPool, mailer: M, clock: Arc<dyn Clock>, product_checks: Arc<dyn PreSendCheck>) -> Self {
+        Self {
+            pool,
+            mailer,
+            clock,
+            product_checks,
+        }
     }
 
     /// Settles any send interrupted by a crash, then sends up to `limit` due
@@ -195,6 +204,11 @@ impl<M: Mailer> Sender<M> {
                 "content changed after approval",
             )
             .await?;
+            return Ok(Claim::Refused);
+        }
+        if let Err(CheckFailed(reason)) = checks::run(self.product_checks.as_ref(), tenant, id, &email).await {
+            report.blocked += 1;
+            refuse(tx, tenant, id, now, MessageStatus::Blocked, &reason).await?;
             return Ok(Claim::Refused);
         }
         if row.may_have_sent && !self.may_retry_unknown(row.first_send_at, now) {

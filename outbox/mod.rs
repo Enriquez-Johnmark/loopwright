@@ -11,6 +11,7 @@
 //!   └─ deadline passes → expired          cancelled ◄── client replied / everything uploaded
 //! ```
 
+mod checks;
 mod sender;
 
 use std::sync::Arc;
@@ -25,6 +26,7 @@ use super::clock::Clock;
 use super::ids::{MessageId, TenantId};
 use super::mail::Email;
 
+pub use checks::{BoxFuture, CheckFailed, MAX_BODY_CHARS, NoExtraChecks, PreSendCheck, links};
 pub use sender::{DrainReport, Sender};
 
 /// Where a message is in its life.
@@ -150,6 +152,9 @@ pub enum OutboxError {
     /// The content changed after the approver looked at it.
     #[error("the message changed since it was shown; review it again")]
     StaleApproval,
+    /// A pre-send check refused the message (D7); the reason says why.
+    #[error("can't approve: {0}")]
+    CheckFailed(String),
     /// The message isn't in a state that allows this.
     #[error("not allowed while the message is {0:?}")]
     WrongStatus(MessageStatus),
@@ -287,6 +292,7 @@ impl Outbox {
         id: MessageId,
         approver: &str,
         seen: &ContentHash,
+        product_checks: &dyn PreSendCheck,
     ) -> Result<(), OutboxError> {
         let now = self.clock.now();
         let mut tx = self.pool.begin().await?;
@@ -297,6 +303,10 @@ impl Outbox {
         if ContentHash::of(&current) != *seen {
             return Err(OutboxError::StaleApproval);
         }
+        // D7: refused here, with the reason, rather than blocked at sending.
+        checks::run(product_checks, tenant, id, &current)
+            .await
+            .map_err(|CheckFailed(reason)| OutboxError::CheckFailed(reason))?;
         sqlx::query!(
             "update outbox_messages
              set status = 'approved', approved_hash = $3, approved_at = $4, approved_by = $5, updated_at = $4
