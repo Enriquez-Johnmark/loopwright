@@ -42,6 +42,8 @@ macro_rules! id_type {
     };
 }
 
+pub(crate) use id_type;
+
 id_type!(
     /// Whoever owns a set of engine data; in Kompleto, a Firm.
     TenantId
