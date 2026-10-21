@@ -32,7 +32,11 @@ pub fn verified(secret: &str, signature: Signature<'_>, body: &[u8], now: Offset
     let Ok(sent_at) = signature.timestamp.trim().parse::<i64>() else {
         return false;
     };
-    if key.is_empty() || (now.unix_timestamp() - sent_at).abs() > TOLERANCE_SECONDS {
+    let recent = now
+        .unix_timestamp()
+        .checked_sub(sent_at)
+        .is_some_and(|age| age.abs() <= TOLERANCE_SECONDS);
+    if key.is_empty() || !recent {
         return false;
     }
     signature.signatures.split_whitespace().any(|entry| {
