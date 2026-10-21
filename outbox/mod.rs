@@ -65,8 +65,14 @@ impl MessageStatus {
         (Self::Cancelled, "cancelled"),
     ];
 
-    fn as_str(self) -> &'static str {
+    /// The stored name, e.g. `"approved"`.
+    pub fn as_str(self) -> &'static str {
         Self::ALL.iter().find(|(s, _)| *s == self).map_or("", |(_, name)| name)
+    }
+
+    /// Reads a stored name.
+    pub fn parse_name(name: &str) -> Option<Self> {
+        Self::ALL.iter().find(|(_, n)| *n == name).map(|(s, _)| *s)
     }
 
     fn parse(name: &str) -> Result<Self, OutboxError> {
@@ -106,6 +112,24 @@ impl ContentHash {
         <[u8; 32]>::try_from(bytes)
             .map(Self)
             .map_err(|_| OutboxError::CorruptRow("approved_hash is not 32 bytes".to_owned()))
+    }
+
+    /// The hash as 64 lowercase hex digits, for an approval form.
+    pub fn to_hex(&self) -> String {
+        self.0.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
+    /// Reads a hash written by [`ContentHash::to_hex`]; `None` if malformed.
+    pub fn from_hex(hex: &str) -> Option<Self> {
+        let digits = hex.as_bytes();
+        if digits.len() != 64 {
+            return None;
+        }
+        let mut bytes = [0_u8; 32];
+        for (byte, pair) in bytes.iter_mut().zip(digits.chunks(2)) {
+            *byte = u8::from_str_radix(std::str::from_utf8(pair).ok()?, 16).ok()?;
+        }
+        Some(Self(bytes))
     }
 
     /// The hash as bytes, e.g. to put in an approval form.
