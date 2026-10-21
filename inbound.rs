@@ -4,12 +4,14 @@
 
 use hmac::{Hmac, KeyInit, Mac};
 use mail_parser::{Message, MessageParser};
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 
 /// The largest message accepted, in bytes (the inbound provider's limit).
 pub const MAX_RAW_BYTES: usize = 25 * 1024 * 1024;
 /// The most text kept from a message's body.
 pub const MAX_TEXT_CHARS: usize = 20_000;
+/// The longest Message-ID kept as a key.
+const MAX_KEY_CHARS: usize = 300;
 
 /// Why a message wasn't read.
 #[derive(Debug, thiserror::Error)]
@@ -25,6 +27,9 @@ pub enum InboundError {
 /// One inbound email.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InboundEmail {
+    /// Tells a redelivery of the same email apart from a new one: its
+    /// Message-ID, or else a hash of the whole message.
+    pub key: String,
     /// The sender's address, lowercased.
     pub from: String,
     /// Every address it was sent to (To, Cc, Delivered-To, X-Original-To), lowercased.
@@ -92,7 +97,18 @@ pub fn parse(raw: &[u8]) -> Result<InboundEmail, InboundError> {
         .body_text(0)
         .map(|text| text.chars().take(MAX_TEXT_CHARS).collect())
         .unwrap_or_default();
+    let key = match message.message_id().map(str::trim).filter(|id| !id.is_empty()) {
+        Some(id) => format!("id:{}", id.chars().take(MAX_KEY_CHARS).collect::<String>()),
+        None => format!(
+            "sha256:{}",
+            Sha256::digest(raw)
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>()
+        ),
+    };
     Ok(InboundEmail {
+        key,
         automatic: is_automatic(&message, &subject),
         attachments: message
             .attachments()
