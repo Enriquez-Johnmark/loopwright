@@ -294,6 +294,16 @@ impl Outbox {
         seen: &ContentHash,
         product_checks: &dyn PreSendCheck,
     ) -> Result<(), OutboxError> {
+        // D7, before the transaction so a check's own queries don't wait on
+        // a connection this one holds. The hash check below makes sure the
+        // content approved is the content checked.
+        let checked = self.get(tenant, id).await?;
+        if checked.content_hash() != *seen {
+            return Err(OutboxError::StaleApproval);
+        }
+        checks::run(product_checks, tenant, id, &checked.email)
+            .await
+            .map_err(|CheckFailed(reason)| OutboxError::CheckFailed(reason))?;
         let now = self.clock.now();
         let mut tx = self.pool.begin().await?;
         let (status, current) = lock(&mut tx, tenant, id).await?;
@@ -303,10 +313,6 @@ impl Outbox {
         if ContentHash::of(&current) != *seen {
             return Err(OutboxError::StaleApproval);
         }
-        // D7: refused here, with the reason, rather than blocked at sending.
-        checks::run(product_checks, tenant, id, &current)
-            .await
-            .map_err(|CheckFailed(reason)| OutboxError::CheckFailed(reason))?;
         sqlx::query!(
             "update outbox_messages
              set status = 'approved', approved_hash = $3, approved_at = $4, approved_by = $5, updated_at = $4
