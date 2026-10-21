@@ -5,5 +5,6 @@ pub mod audit;
 pub mod clock;
 pub mod ids;
 pub mod jobs;
+pub mod llm;
 pub mod mail;
 pub mod outbox;
