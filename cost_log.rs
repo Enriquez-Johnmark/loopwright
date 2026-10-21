@@ -141,7 +141,9 @@ pub async fn totals_for_tenant(
     })
 }
 
-/// Every Tenant's totals over a time range: the operator's report.
+/// Every Tenant's totals over a time range: the operator's report. Like the
+/// system-wide workers, it reads across tenants; it is reachable only from
+/// the operator's command line, never from a Tenant's pages.
 pub async fn totals_by_tenant(
     pool: &PgPool,
     from: OffsetDateTime,
