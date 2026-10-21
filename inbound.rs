@@ -2,7 +2,9 @@
 //! uses. All of it is untrusted: addresses are lowercased, the text is cut
 //! to a fixed length, and attachments are only bytes, never opened here.
 
+use hmac::{Hmac, KeyInit, Mac};
 use mail_parser::{Message, MessageParser};
+use sha2::Sha256;
 
 /// The largest message accepted, in bytes (the inbound provider's limit).
 pub const MAX_RAW_BYTES: usize = 25 * 1024 * 1024;
@@ -35,6 +37,29 @@ pub struct InboundEmail {
     pub automatic: bool,
     /// The attached files' bytes.
     pub attachments: Vec<Vec<u8>>,
+}
+
+/// Whether `signature` (hex) is the HMAC-SHA256 of `body` under `secret`,
+/// compared in constant time: how the inbound provider proves a message
+/// came from it.
+pub fn signed(secret: &[u8], body: &[u8], signature: &str) -> bool {
+    let Some(signature) = from_hex(signature.trim()) else {
+        return false;
+    };
+    let Ok(mac) = <Hmac<Sha256> as KeyInit>::new_from_slice(secret) else {
+        return false;
+    };
+    !secret.is_empty() && mac.chain_update(body).verify_slice(&signature).is_ok()
+}
+
+fn from_hex(text: &str) -> Option<Vec<u8>> {
+    if !text.len().is_multiple_of(2) || !text.is_ascii() {
+        return None;
+    }
+    text.as_bytes()
+        .chunks(2)
+        .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).ok()?, 16).ok())
+        .collect()
 }
 
 /// Reads `raw`, a whole message as received.
