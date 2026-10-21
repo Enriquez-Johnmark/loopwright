@@ -3,13 +3,15 @@
 //! to a fixed length, and attachments are only bytes, never opened here.
 
 use hmac::{Hmac, KeyInit, Mac};
-use mail_parser::{Message, MessageParser};
+use mail_parser::{Message, MessageParser, MimeHeaders};
 use sha2::{Digest, Sha256};
 
 /// The largest message accepted, in bytes (the inbound provider's limit).
 pub const MAX_RAW_BYTES: usize = 25 * 1024 * 1024;
 /// The most text kept from a message's body.
 pub const MAX_TEXT_CHARS: usize = 20_000;
+/// The smallest image embedded in the HTML that's kept as an attachment.
+const MIN_EMBEDDED_BYTES: usize = 50 * 1024;
 /// The longest Message-ID kept as a key.
 const MAX_KEY_CHARS: usize = 300;
 
@@ -113,6 +115,9 @@ pub fn parse(raw: &[u8]) -> Result<InboundEmail, InboundError> {
         attachments: message
             .attachments()
             .filter(|part| !part.is_message())
+            // Logos in a signature are small images the HTML embeds by
+            // Content-ID; a photo pasted into the text is larger.
+            .filter(|part| part.content_id().is_none() || part.contents().len() >= MIN_EMBEDDED_BYTES)
             .map(|part| part.contents().to_vec())
             .collect(),
         from,
