@@ -56,3 +56,7 @@ id_type!(
     /// One background job.
     JobId
 );
+id_type!(
+    /// One stored, encrypted file.
+    FileId
+);
