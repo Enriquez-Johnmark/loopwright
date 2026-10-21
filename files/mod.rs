@@ -13,6 +13,7 @@ use time::OffsetDateTime;
 pub use cipher::{FileCipher, MasterKey, Sealed};
 pub use store::{FileStore, LocalDisk};
 
+use crate::engine::audit::{self, AuditEvent};
 use crate::engine::clock::Clock;
 use crate::engine::ids::{FileId, TenantId};
 
@@ -79,7 +80,7 @@ impl Files {
         .execute(&self.pool)
         .await?;
         if let Err(err) = self.store.put(tenant, id, &sealed.ciphertext).await {
-            self.forget(tenant, id).await.ok();
+            self.forget(tenant, id, "storing failed").await.ok();
             return Err(err.into());
         }
         Ok(id)
@@ -110,18 +111,82 @@ impl Files {
         )
     }
 
-    /// Removes the stored file, then its key.
-    async fn forget(&self, tenant: TenantId, id: FileId) -> Result<(), FileError> {
+    /// Brings file `id`'s deadline forward to `at`. A later `at` changes
+    /// nothing: a deadline only ever moves earlier.
+    pub async fn delete_no_later_than(
+        &self,
+        tenant: TenantId,
+        id: FileId,
+        at: OffsetDateTime,
+    ) -> Result<(), FileError> {
+        let updated = sqlx::query!(
+            "update stored_files set delete_by = least(delete_by, $3)
+             where id = $1 and tenant_id = $2 and deleted_at is null",
+            id.as_uuid(),
+            tenant.as_uuid(),
+            at,
+        )
+        .execute(&self.pool)
+        .await?;
+        if updated.rows_affected() == 0 {
+            return Err(FileError::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Deletes every file past its deadline; returns how many. This is a
+    /// system-wide worker: it sweeps every tenant's files, and names the
+    /// file's tenant in every write.
+    pub async fn sweep(&self) -> Result<usize, FileError> {
+        let due = sqlx::query!(
+            "select id, tenant_id from stored_files
+             where deleted_at is null and delete_by <= $1
+             order by delete_by limit 500",
+            self.clock.now(),
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        let mut deleted = 0;
+        for row in due {
+            if self.forget(row.tenant_id.into(), row.id.into(), "deadline").await? {
+                deleted += 1;
+            }
+        }
+        Ok(deleted)
+    }
+
+    /// Removes the stored file, then its key, and records why; false if it
+    /// was already gone. Safe to repeat after a crash between the two.
+    async fn forget(&self, tenant: TenantId, id: FileId, reason: &str) -> Result<bool, FileError> {
         self.store.delete(tenant, id).await?;
-        sqlx::query!(
+        let now = self.clock.now();
+        let mut tx = self.pool.begin().await?;
+        let updated = sqlx::query!(
             "update stored_files set deleted_at = $3, wrapped_key = null
              where id = $1 and tenant_id = $2 and deleted_at is null",
             id.as_uuid(),
             tenant.as_uuid(),
-            self.clock.now(),
+            now,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
-        Ok(())
+        if updated.rows_affected() == 0 {
+            return Ok(false);
+        }
+        audit::record(
+            &mut *tx,
+            &AuditEvent {
+                tenant,
+                at: now,
+                actor: audit::SYSTEM,
+                action: "file.deleted",
+                subject_type: "stored_file",
+                subject_id: id.as_uuid(),
+                details: serde_json::json!({ "reason": reason }),
+            },
+        )
+        .await?;
+        tx.commit().await?;
+        Ok(true)
     }
 }
