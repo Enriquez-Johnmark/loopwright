@@ -4,6 +4,8 @@
 use std::io;
 use std::path::PathBuf;
 
+use tokio::io::AsyncWriteExt;
+
 use crate::engine::ids::{FileId, TenantId};
 use crate::engine::outbox::BoxFuture;
 
@@ -43,10 +45,16 @@ impl FileStore for LocalDisk {
             if let Some(folder) = path.parent() {
                 tokio::fs::create_dir_all(folder).await?;
             }
-            // Written whole, then renamed, so a crash never leaves half a file
-            // under the real name.
-            tokio::fs::write(&partial, bytes).await?;
-            tokio::fs::rename(&partial, &path).await
+            // Written whole and flushed to disk, then renamed and the rename
+            // flushed, so a crash never leaves half a file under the real name.
+            let mut file = tokio::fs::File::create(&partial).await?;
+            file.write_all(bytes).await?;
+            file.sync_all().await?;
+            tokio::fs::rename(&partial, &path).await?;
+            if let Some(folder) = path.parent() {
+                tokio::fs::File::open(folder).await?.sync_all().await?;
+            }
+            Ok(())
         })
     }
 
