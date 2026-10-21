@@ -134,6 +134,12 @@ impl Files {
         Ok(())
     }
 
+    /// Deletes file `id` of `tenant` now, e.g. one whose upload couldn't
+    /// be recorded.
+    pub async fn discard(&self, tenant: TenantId, id: FileId) -> Result<(), FileError> {
+        self.forget(tenant, id, "discarded").await.map(|_| ())
+    }
+
     /// Deletes every file past its deadline; returns how many. This is a
     /// system-wide worker: it sweeps every tenant's files, and names the
     /// file's tenant in every write.
