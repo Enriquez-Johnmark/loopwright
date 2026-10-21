@@ -6,6 +6,7 @@ pub mod clock;
 pub mod cost_log;
 pub mod files;
 pub mod ids;
+pub mod inbound;
 pub mod jobs;
 pub mod llm;
 pub mod mail;

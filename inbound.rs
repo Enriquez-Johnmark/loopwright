@@ -1,0 +1,100 @@
+//! Inbound email (G1): a raw message reduced to the few facts the engine
+//! uses. All of it is untrusted: addresses are lowercased, the text is cut
+//! to a fixed length, and attachments are only bytes, never opened here.
+
+use mail_parser::{Message, MessageParser};
+
+/// The largest message accepted, in bytes (the inbound provider's limit).
+pub const MAX_RAW_BYTES: usize = 25 * 1024 * 1024;
+/// The most text kept from a message's body.
+pub const MAX_TEXT_CHARS: usize = 20_000;
+
+/// Why a message wasn't read.
+#[derive(Debug, thiserror::Error)]
+pub enum InboundError {
+    /// Not a readable email, or no sender address.
+    #[error("not a readable email")]
+    Unreadable,
+    /// Over the size limit.
+    #[error("the email is too large")]
+    TooLarge,
+}
+
+/// One inbound email.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InboundEmail {
+    /// The sender's address, lowercased.
+    pub from: String,
+    /// Every address it was sent to (To, Cc, Delivered-To, X-Original-To), lowercased.
+    pub recipients: Vec<String>,
+    /// The subject.
+    pub subject: String,
+    /// The plain text, at most [`MAX_TEXT_CHARS`].
+    pub text: String,
+    /// Whether it was sent automatically (an out-of-office reply, a list).
+    pub automatic: bool,
+    /// The attached files' bytes.
+    pub attachments: Vec<Vec<u8>>,
+}
+
+/// Reads `raw`, a whole message as received.
+pub fn parse(raw: &[u8]) -> Result<InboundEmail, InboundError> {
+    if raw.len() > MAX_RAW_BYTES {
+        return Err(InboundError::TooLarge);
+    }
+    let message = MessageParser::default().parse(raw).ok_or(InboundError::Unreadable)?;
+    let from = message
+        .from()
+        .and_then(|from| from.first())
+        .and_then(|from| from.address())
+        .map(|address| address.trim().to_ascii_lowercase())
+        .filter(|address| address.contains('@'))
+        .ok_or(InboundError::Unreadable)?;
+    let mut recipients: Vec<String> = [message.to(), message.cc()]
+        .into_iter()
+        .flatten()
+        .flat_map(|list| list.iter())
+        .filter_map(|addr| addr.address())
+        .map(str::to_ascii_lowercase)
+        .collect();
+    for name in ["Delivered-To", "X-Original-To"] {
+        if let Some(value) = message.header_raw(name) {
+            recipients.push(value.trim().trim_matches(['<', '>']).to_ascii_lowercase());
+        }
+    }
+    let subject = message.subject().unwrap_or_default().trim().to_owned();
+    let text = message
+        .body_text(0)
+        .map(|text| text.chars().take(MAX_TEXT_CHARS).collect())
+        .unwrap_or_default();
+    Ok(InboundEmail {
+        automatic: is_automatic(&message, &subject),
+        attachments: message
+            .attachments()
+            .filter(|part| !part.is_message())
+            .map(|part| part.contents().to_vec())
+            .collect(),
+        from,
+        recipients,
+        subject,
+        text,
+    })
+}
+
+/// Generous on purpose: a human reply taken for an automatic one only means
+/// reminders continue, while the reverse would stop them wrongly.
+fn is_automatic(message: &Message<'_>, subject: &str) -> bool {
+    let header = |name: &str| message.header_raw(name).map(|value| value.trim().to_ascii_lowercase());
+    let auto_submitted =
+        header("Auto-Submitted").is_some_and(|value| value.split(';').next().unwrap_or_default().trim() != "no");
+    let precedence =
+        header("Precedence").is_some_and(|value| matches!(value.as_str(), "bulk" | "list" | "junk" | "auto_reply"));
+    let marked = ["X-Autoreply", "X-Autorespond", "List-Id"]
+        .into_iter()
+        .any(|name| header(name).is_some());
+    let subject = subject.to_ascii_lowercase();
+    let out_of_office = ["automatic reply", "out of office", "auto:"]
+        .into_iter()
+        .any(|prefix| subject.starts_with(prefix));
+    auto_submitted || precedence || marked || out_of_office
+}
