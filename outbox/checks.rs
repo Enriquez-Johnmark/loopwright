@@ -44,11 +44,41 @@ impl PreSendCheck for NoExtraChecks {
     }
 }
 
-/// The links in `text`: words containing `://` or starting with `www.`.
+/// Top-level domains a bare `name.tld/path` link would use. A list rather
+/// than any word with a dot, so typos like "po.Salamat" aren't links.
+const LINK_TLDS: [&str; 24] = [
+    "com", "net", "org", "ph", "io", "co", "me", "app", "info", "biz", "xyz", "link", "site", "online", "store",
+    "shop", "ly", "gl", "gg", "to", "dev", "page", "top", "cc",
+];
+
+/// The links in `text`: words, stripped of surrounding punctuation, that
+/// have a scheme (`https://`), start with `www.`, or are a bare domain
+/// such as `gcash-pay.ph/upload`. Email addresses aren't links.
 pub fn links(text: &str) -> Vec<&str> {
     text.split_whitespace()
-        .filter(|word| word.contains("://") || word.to_ascii_lowercase().starts_with("www."))
+        .map(|word| {
+            word.trim_start_matches(['(', '<', '[', '"', '\''])
+                .trim_end_matches([')', '>', ']', '"', '\'', '.', ',', ';', ':', '!', '?'])
+        })
+        .filter(|word| looks_like_link(word))
         .collect()
+}
+
+fn looks_like_link(word: &str) -> bool {
+    let lower = word.to_ascii_lowercase();
+    if lower.contains("://") || lower.starts_with("www.") {
+        return true;
+    }
+    if lower.contains('@') {
+        return false;
+    }
+    let host = lower.split('/').next().unwrap_or_default();
+    let labels: Vec<&str> = host.split('.').collect();
+    labels.len() >= 2
+        && labels
+            .iter()
+            .all(|label| !label.is_empty() && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'))
+        && labels.last().is_some_and(|tld| LINK_TLDS.contains(tld))
 }
 
 /// The engine's rules, then the product's.
@@ -70,4 +100,30 @@ pub(super) async fn run(
         return Err(CheckFailed::Refused("the message has more than one link".to_owned()));
     }
     product.check(tenant, id, email).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::links;
+
+    #[test]
+    fn d7_links_are_found_inside_punctuation_and_without_a_scheme() {
+        for text in [
+            "Upload here: https://getkompleto.test/u/abc",
+            "Pay here (www.evil.ph/pay) po",
+            "<http://x.example/a>",
+            "I-upload sa gcash-pay.ph/upload.",
+            "Visit bit.ly/abc123 now",
+            "See Drive.Google.com",
+        ] {
+            assert_eq!(links(text).len(), 1, "{text}");
+        }
+    }
+
+    #[test]
+    fn d7_ordinary_words_dates_and_addresses_are_not_links() {
+        let text = "Hi Nena, e.g. the Q3 2026 1601-EQ docs for Sari-Sari Store Inc. by 21.10.2026 po.Salamat! \
+                    Reply to nena@example.test. Santos Bookkeeping";
+        assert_eq!(links(text), Vec::<&str>::new());
+    }
 }
