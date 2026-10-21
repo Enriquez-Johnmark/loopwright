@@ -148,8 +148,12 @@ impl Files {
         .await?;
         let mut deleted = 0;
         for row in due {
-            if self.forget(row.tenant_id.into(), row.id.into(), "deadline").await? {
-                deleted += 1;
+            match self.forget(row.tenant_id.into(), row.id.into(), "deadline").await {
+                Ok(true) => deleted += 1,
+                Ok(false) => {}
+                // One file that can't be deleted mustn't hold up the others;
+                // it's tried again at the next sweep.
+                Err(err) => tracing::error!(tenant = %row.tenant_id, file = %row.id, %err, "deleting a file failed"),
             }
         }
         Ok(deleted)
