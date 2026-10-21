@@ -77,7 +77,7 @@ pub fn parse(raw: &[u8]) -> Result<InboundEmail, InboundError> {
         .from()
         .and_then(|from| from.first())
         .and_then(|from| from.address())
-        .map(|address| address.trim().to_ascii_lowercase())
+        .map(|address| without_nul(address.trim()).to_ascii_lowercase())
         .filter(|address| address.contains('@'))
         .ok_or(InboundError::Unreadable)?;
     let mut recipients: Vec<String> = [message.to(), message.cc()]
@@ -92,10 +92,10 @@ pub fn parse(raw: &[u8]) -> Result<InboundEmail, InboundError> {
             recipients.push(value.trim().trim_matches(['<', '>']).to_ascii_lowercase());
         }
     }
-    let subject = message.subject().unwrap_or_default().trim().to_owned();
+    let subject = without_nul(message.subject().unwrap_or_default().trim());
     let text = message
         .body_text(0)
-        .map(|text| text.chars().take(MAX_TEXT_CHARS).collect())
+        .map(|text| without_nul(&text).chars().take(MAX_TEXT_CHARS).collect())
         .unwrap_or_default();
     let key = match message.message_id().map(str::trim).filter(|id| !id.is_empty()) {
         Some(id) => format!("id:{}", id.chars().take(MAX_KEY_CHARS).collect::<String>()),
@@ -120,6 +120,11 @@ pub fn parse(raw: &[u8]) -> Result<InboundEmail, InboundError> {
         subject,
         text,
     })
+}
+
+/// `text` without NUL characters, which Postgres can't store.
+fn without_nul(text: &str) -> String {
+    text.replace('\0', "")
 }
 
 /// Generous on purpose: a human reply taken for an automatic one only means
