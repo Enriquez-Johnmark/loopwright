@@ -82,7 +82,8 @@ struct Payload {
 
 #[derive(Deserialize)]
 struct PayloadData {
-    email_id: String,
+    /// Only events about an email carry it.
+    email_id: Option<String>,
     bounce: Option<Bounce>,
 }
 
@@ -99,6 +100,7 @@ pub fn parse(body: &[u8]) -> Option<DeliveryEvent> {
     let id = payload.data.email_id;
     Some(match payload.kind.as_str() {
         "email.bounced" => {
+            let id = id?;
             let bounce = payload.data.bounce;
             DeliveryEvent::Bounced {
                 provider_message_id: id,
@@ -112,7 +114,7 @@ pub fn parse(body: &[u8]) -> Option<DeliveryEvent> {
             }
         }
         "email.complained" => DeliveryEvent::Complained {
-            provider_message_id: id,
+            provider_message_id: id?,
         },
         _ => DeliveryEvent::Other,
     })
