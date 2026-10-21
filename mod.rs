@@ -10,3 +10,4 @@ pub mod jobs;
 pub mod llm;
 pub mod mail;
 pub mod outbox;
+pub mod signed;
