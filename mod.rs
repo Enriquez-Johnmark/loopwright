@@ -3,6 +3,7 @@
 
 pub mod audit;
 pub mod clock;
+pub mod cost_log;
 pub mod ids;
 pub mod jobs;
 pub mod llm;
