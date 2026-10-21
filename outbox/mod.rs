@@ -176,10 +176,23 @@ impl Outbox {
 
     /// Stores `email` as a draft awaiting approval.
     pub async fn create_draft(&self, tenant: TenantId, email: &Email) -> Result<MessageId, OutboxError> {
+        let mut tx = self.pool.begin().await?;
+        let id = self.create_draft_in(&mut tx, tenant, email).await?;
+        tx.commit().await?;
+        Ok(id)
+    }
+
+    /// [`Outbox::create_draft`] inside the caller's transaction, so the
+    /// Draft commits or rolls back with the caller's own changes.
+    pub async fn create_draft_in(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+        tenant: TenantId,
+        email: &Email,
+    ) -> Result<MessageId, OutboxError> {
         validate(email)?;
         let id = MessageId::new();
         let now = self.clock.now();
-        let mut tx = self.pool.begin().await?;
         sqlx::query!(
             "insert into outbox_messages
                 (id, tenant_id, status, to_address, from_name, reply_to, subject, body_text, created_at, updated_at)
@@ -193,10 +206,13 @@ impl Outbox {
             email.body_text,
             now,
         )
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
-        audit::record(&mut *tx, &event(tenant, now, audit::SYSTEM, "outbox.draft_created", id)).await?;
-        tx.commit().await?;
+        audit::record(
+            &mut **tx,
+            &event(tenant, now, audit::SYSTEM, "outbox.draft_created", id),
+        )
+        .await?;
         Ok(id)
     }
 
