@@ -12,4 +12,5 @@ pub mod llm;
 pub mod mail;
 pub mod outbox;
 pub mod signed;
+pub mod tenants;
 pub mod webhooks;

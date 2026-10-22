@@ -165,6 +165,21 @@ impl Files {
         Ok(deleted)
     }
 
+    /// Deletes every file of `tenant`, whatever its deadline, and its rows:
+    /// the tenant's account is being erased (I2). Returns how many files.
+    pub async fn erase_tenant(&self, tenant: TenantId) -> Result<usize, FileError> {
+        let ids = sqlx::query_scalar!("select id from stored_files where tenant_id = $1", tenant.as_uuid())
+            .fetch_all(&self.pool)
+            .await?;
+        for id in &ids {
+            self.store.delete(tenant, (*id).into()).await?;
+        }
+        sqlx::query!("delete from stored_files where tenant_id = $1", tenant.as_uuid())
+            .execute(&self.pool)
+            .await?;
+        Ok(ids.len())
+    }
+
     /// Removes the stored file, then its key, and records why; false if it
     /// was already gone. Safe to repeat after a crash between the two.
     async fn forget(&self, tenant: TenantId, id: FileId, reason: &str) -> Result<bool, FileError> {
