@@ -425,14 +425,16 @@ impl Outbox {
         }))
     }
 
-    /// Expires every Draft past its deadline, across all tenants (a
-    /// system-wide sweep); returns how many.
+    /// Expires every Draft past its deadline, and every approved message
+    /// held back so long that its deadline passed before it started to
+    /// send, across all tenants (a system-wide sweep); returns how many.
     pub async fn expire_overdue(&self) -> Result<u64, OutboxError> {
         let now = self.clock.now();
         let mut tx = self.pool.begin().await?;
         let expired = sqlx::query!(
             "update outbox_messages set status = 'expired', updated_at = $1
-             where status = 'draft' and expires_at <= $1
+             where (status = 'draft' or (status = 'approved' and first_send_at is null))
+               and expires_at <= $1
              returning id, tenant_id",
             now,
         )
