@@ -47,12 +47,44 @@ pub struct DrainReport {
     pub unconfirmed: usize,
 }
 
+/// How many messages may start sending in any 24 hours, under a provider's
+/// daily cap. Messages with a deadline (`expires_at`, e.g. Reminders) stop
+/// at `per_day`; ones without (login links, notices) may also use the
+/// `reserve` above it, so a full day of Reminders never locks anyone out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SendBudget {
+    /// Messages with a deadline, per 24 hours.
+    pub per_day: i64,
+    /// Extra room for messages without one.
+    pub reserve: i64,
+}
+
+impl SendBudget {
+    /// Resend Free allows 100 a day: 90 Reminders, 10 kept for the rest.
+    pub const RESEND_FREE: Self = Self {
+        per_day: 90,
+        reserve: 10,
+    };
+}
+
+/// How many messages started sending in the 24 hours before `now`, across
+/// all tenants: the provider's cap is for the whole account.
+pub async fn started_last_day(pool: &PgPool, now: OffsetDateTime) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"select count(*) as "count!" from outbox_messages where first_send_at > $1"#,
+        now - Duration::hours(24),
+    )
+    .fetch_one(pool)
+    .await
+}
+
 /// Sends approved messages through a [`Mailer`].
 pub struct Sender<M> {
     pool: PgPool,
     mailer: M,
     clock: Arc<dyn Clock>,
     product_checks: Arc<dyn PreSendCheck>,
+    budget: Option<SendBudget>,
 }
 
 /// A message this sender has marked `sending` and now owns.
@@ -86,7 +118,15 @@ impl<M: Mailer> Sender<M> {
             mailer,
             clock,
             product_checks,
+            budget: None,
         }
+    }
+
+    /// Sends no more than `budget` allows; without one, there's no limit.
+    #[must_use]
+    pub fn with_budget(mut self, budget: SendBudget) -> Self {
+        self.budget = Some(budget);
+        self
     }
 
     /// Settles any send interrupted by a crash, then sends up to `limit` due
@@ -167,15 +207,28 @@ impl<M: Mailer> Sender<M> {
 
     async fn claim(&self, tx: &mut Transaction<'_, Postgres>, report: &mut DrainReport) -> Result<Claim, OutboxError> {
         let now = self.clock.now();
+        // A retry was counted when it first started, so it may always go.
+        let (dated, undated) = match self.budget {
+            None => (true, true),
+            Some(budget) => {
+                let started = started_last_day(&self.pool, now).await?;
+                (started < budget.per_day, started < budget.per_day + budget.reserve)
+            }
+        };
+        // Nearest deadline first; messages without one before all.
         let Some(row) = sqlx::query!(
             "select id, tenant_id, to_address, from_name, reply_to, subject, body_text,
                     approved_hash, may_have_sent, first_send_at, send_attempts
              from outbox_messages
-             where status = 'approved' or (status = 'failed' and retry_at <= $1)
-             order by approved_at
+             where (status = 'approved' or (status = 'failed' and retry_at <= $1))
+               and (first_send_at is not null
+                    or (expires_at is null and $3) or (expires_at is not null and $2))
+             order by expires_at nulls first, approved_at
              limit 1
              for update skip locked",
             now,
+            dated,
+            undated,
         )
         .fetch_optional(&mut **tx)
         .await?

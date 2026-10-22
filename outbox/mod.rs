@@ -27,7 +27,7 @@ use super::ids::{MessageId, TenantId};
 use super::mail::Email;
 
 pub use checks::{BoxFuture, CheckFailed, MAX_BODY_CHARS, NoExtraChecks, PreSendCheck, links};
-pub use sender::{DrainReport, Sender};
+pub use sender::{DrainReport, SendBudget, Sender, started_last_day};
 
 /// Where a message is in its life.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
