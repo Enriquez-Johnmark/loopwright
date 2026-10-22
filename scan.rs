@@ -10,6 +10,8 @@ use tokio::net::TcpStream;
 /// How long a scan may take, connection included. A 10 MB file takes about
 /// a second.
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
+/// How long clamd may take to answer a PING.
+const PING_TIMEOUT: Duration = Duration::from_secs(5);
 /// Bytes per INSTREAM chunk.
 const CHUNK_BYTES: usize = 64 * 1024;
 /// clamd's answers are one short line.
@@ -69,6 +71,22 @@ impl Clamd {
         verdict(&answer)
     }
 
+    /// Checks that clamd answers.
+    pub async fn ping(&self) -> Result<(), ScanError> {
+        let answer = tokio::time::timeout(self.timeout.min(PING_TIMEOUT), async {
+            let mut socket = TcpStream::connect(&self.addr).await?;
+            socket.write_all(b"zPING\0").await?;
+            answer(socket).await
+        })
+        .await
+        .map_err(|_| ScanError::TimedOut)??;
+        if answer == "PONG" {
+            Ok(())
+        } else {
+            Err(ScanError::Unexpected(answer))
+        }
+    }
+
     async fn instream(&self, file: &[u8]) -> Result<String, ScanError> {
         let mut socket = TcpStream::connect(&self.addr).await?;
         socket.write_all(b"zINSTREAM\0").await?;
@@ -78,13 +96,17 @@ impl Clamd {
             socket.write_all(chunk).await?;
         }
         socket.write_all(&0u32.to_be_bytes()).await?;
-        // clamd answers one NUL-terminated line, then closes the connection.
-        let mut answer = Vec::new();
-        socket.take(MAX_ANSWER_BYTES).read_to_end(&mut answer).await?;
-        Ok(String::from_utf8_lossy(&answer)
-            .trim_end_matches(['\0', '\n'])
-            .to_owned())
+        answer(socket).await
     }
+}
+
+/// clamd answers one NUL-terminated line, then closes the connection.
+async fn answer(socket: TcpStream) -> Result<String, ScanError> {
+    let mut answer = Vec::new();
+    socket.take(MAX_ANSWER_BYTES).read_to_end(&mut answer).await?;
+    Ok(String::from_utf8_lossy(&answer)
+        .trim_end_matches(['\0', '\n'])
+        .to_owned())
 }
 
 fn verdict(answer: &str) -> Result<Verdict, ScanError> {
