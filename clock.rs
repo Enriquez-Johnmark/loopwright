@@ -22,6 +22,27 @@ impl Clock for SystemClock {
     }
 }
 
+/// The real clock moved by a fixed amount: time passes as usual, but on
+/// another day. For showing Kompleto as of a chosen date, never in
+/// production.
+#[derive(Debug, Clone, Copy)]
+pub struct ShiftedClock {
+    by: Duration,
+}
+
+impl ShiftedClock {
+    /// A clock `by` ahead of the real one (behind, if negative).
+    pub fn new(by: Duration) -> Self {
+        Self { by }
+    }
+}
+
+impl Clock for ShiftedClock {
+    fn now(&self) -> OffsetDateTime {
+        SystemClock.now() + self.by
+    }
+}
+
 /// A clock that stays where it is put; for tests and demos.
 #[derive(Debug)]
 pub struct FixedClock {
