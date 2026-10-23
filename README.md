@@ -93,3 +93,5 @@ Loopwright was built inside Kompleto, its first product, and moved to its own re
 ## Licence
 
 [AGPL-3.0-only](LICENSE). You may use, study and change it; if you run a modified version as a network service, you must offer its source to that service's users.
+
+Contributions: the author also uses Loopwright in products that are not open source, so outside contributions can only be accepted with a contributor agreement. Please open an issue first.
