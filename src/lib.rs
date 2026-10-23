@@ -21,3 +21,7 @@ pub mod scan;
 pub mod signed;
 pub mod tenants;
 pub mod webhooks;
+
+/// The engine's database tables. A product runs these before its own
+/// migrations, e.g. `loopwright::MIGRATOR.run(&pool).await?`.
+pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
