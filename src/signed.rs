@@ -8,7 +8,7 @@ use secrecy::{ExposeSecret, SecretBox};
 use sha2::Sha256;
 use uuid::Uuid;
 
-use crate::engine::files::MasterKey;
+use crate::files::MasterKey;
 
 /// Signature length in bytes: 128 bits.
 const SIGNATURE_LEN: usize = 16;

@@ -17,10 +17,10 @@ use time::{Duration, OffsetDateTime};
 
 use super::checks::{self, CheckFailed, PreSendCheck};
 use super::{ContentHash, MessageStatus, OutboxError, event};
-use crate::engine::audit::{self, AuditEvent};
-use crate::engine::clock::Clock;
-use crate::engine::ids::{MessageId, TenantId};
-use crate::engine::mail::{Email, MailError, Mailer, SendReceipt};
+use crate::audit::{self, AuditEvent};
+use crate::clock::Clock;
+use crate::ids::{MessageId, TenantId};
+use crate::mail::{Email, MailError, Mailer, SendReceipt};
 
 /// Advisory-lock key that makes the sender a single instance.
 const SENDER_LOCK: i64 = 0x6b6f_6d70_6f75_7462;
@@ -463,10 +463,10 @@ fn backoff(attempt: i32) -> Duration {
 }
 
 /// Test-only crash point for the E1 test: aborts the process when
-/// `KOMPLETO_FAILPOINT` names this point. Compiled out of normal builds.
+/// `LOOPWRIGHT_FAILPOINT` names this point. Compiled out of normal builds.
 #[cfg(feature = "failpoints")]
 fn failpoint(name: &str) {
-    if std::env::var("KOMPLETO_FAILPOINT").is_ok_and(|v| v == name) {
+    if std::env::var("LOOPWRIGHT_FAILPOINT").is_ok_and(|v| v == name) {
         std::process::abort();
     }
 }

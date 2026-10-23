@@ -1,0 +1,6 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+disallowed-methods = [
+    { path = "time::OffsetDateTime::now_utc", reason = "read time through engine::clock::Clock so tests can control it" },
+    { path = "std::time::SystemTime::now", reason = "read time through engine::clock::Clock so tests can control it" },
+]

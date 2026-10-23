@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update outbox_messages set status = 'expired', updated_at = $3\n             where id = $1 and tenant_id = $2 and status = 'draft' and expires_at <= $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "134e87ae2a114c63c0057977b7cb6da042cb0ce98d19c6bd6d3780aa3b4572b9"
+}

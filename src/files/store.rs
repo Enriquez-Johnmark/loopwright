@@ -6,8 +6,8 @@ use std::path::PathBuf;
 
 use tokio::io::AsyncWriteExt;
 
-use crate::engine::ids::{FileId, TenantId};
-use crate::engine::outbox::BoxFuture;
+use crate::ids::{FileId, TenantId};
+use crate::outbox::BoxFuture;
 
 /// Somewhere to keep encrypted files, by tenant and file ID.
 pub trait FileStore: Send + Sync {

@@ -10,7 +10,7 @@ use secrecy::{ExposeSecret, SecretBox};
 use sha2::Sha256;
 
 use super::FileError;
-use crate::engine::ids::{FileId, TenantId};
+use crate::ids::{FileId, TenantId};
 
 const NONCE_LEN: usize = 24;
 

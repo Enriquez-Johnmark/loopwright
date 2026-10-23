@@ -1,23 +1,25 @@
 //! Typed identifiers, so a tenant's ID can't be passed where a message's ID
 //! belongs.
 
-use uuid::Uuid;
-
+/// Defines a typed ID: a `Uuid` newtype that is time-ordered, serializable
+/// and stored as a `uuid` column. Products use it for their own IDs too; the
+/// crate using it needs `uuid`, `serde` and `sqlx` as dependencies.
+#[macro_export]
 macro_rules! id_type {
     ($(#[$doc:meta])* $name:ident) => {
         $(#[$doc])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, sqlx::Type)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, ::serde::Serialize, ::serde::Deserialize, ::sqlx::Type)]
         #[sqlx(transparent)]
-        pub struct $name(Uuid);
+        pub struct $name(::uuid::Uuid);
 
         impl $name {
             /// A new, time-ordered ID.
             pub fn new() -> Self {
-                Self(Uuid::now_v7())
+                Self(::uuid::Uuid::now_v7())
             }
 
             /// The underlying UUID.
-            pub fn as_uuid(&self) -> Uuid {
+            pub fn as_uuid(&self) -> ::uuid::Uuid {
                 self.0
             }
         }
@@ -28,8 +30,8 @@ macro_rules! id_type {
             }
         }
 
-        impl From<Uuid> for $name {
-            fn from(id: Uuid) -> Self {
+        impl From<::uuid::Uuid> for $name {
+            fn from(id: ::uuid::Uuid) -> Self {
                 Self(id)
             }
         }
@@ -42,10 +44,10 @@ macro_rules! id_type {
     };
 }
 
-pub(crate) use id_type;
+pub use crate::id_type;
 
 id_type!(
-    /// Whoever owns a set of engine data; in Kompleto, a Firm.
+    /// Whoever owns a set of engine data, e.g. a customer business.
     TenantId
 );
 id_type!(

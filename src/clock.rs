@@ -23,7 +23,7 @@ impl Clock for SystemClock {
 }
 
 /// The real clock moved by a fixed amount: time passes as usual, but on
-/// another day. For showing Kompleto as of a chosen date, never in
+/// another day. For showing a product as of a chosen date, never in
 /// production.
 #[derive(Debug, Clone, Copy)]
 pub struct ShiftedClock {

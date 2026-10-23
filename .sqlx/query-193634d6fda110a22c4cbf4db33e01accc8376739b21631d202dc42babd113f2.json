@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update stored_files set delete_by = least(delete_by, $3)\n             where id = $1 and tenant_id = $2 and deleted_at is null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "193634d6fda110a22c4cbf4db33e01accc8376739b21631d202dc42babd113f2"
+}

@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select may_have_sent from outbox_messages\n             where id = $1 and tenant_id = $2 and status = 'sending' and send_attempts = $3\n             for update",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "may_have_sent",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "may_have_sent"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9112bdc93c94554d2b1b5cf5461242912549c7991e06ee4cc4f16398414b74dd"
+}

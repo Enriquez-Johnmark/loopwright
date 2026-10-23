@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select wrapped_key from stored_files where id = $1 and tenant_id = $2 and deleted_at is null",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "wrapped_key",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "stored_files",
+            "name": "wrapped_key"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "83bd9503a29b672354f3c1ef9095ca62c301ec9aa9e21456acb2b9eb5d350eb2"
+}

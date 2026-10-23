@@ -9,8 +9,8 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use crate::engine::ids::{MessageId, TenantId};
-use crate::engine::mail::Email;
+use crate::ids::{MessageId, TenantId};
+use crate::mail::Email;
 
 /// The longest body the outbox sends, in characters.
 pub const MAX_BODY_CHARS: usize = 2_000;
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn d7_links_are_found_inside_punctuation_and_without_a_scheme() {
         for text in [
-            "Upload here: https://getkompleto.test/u/abc",
+            "Upload here: https://product.test/u/abc",
             "Pay here (www.evil.ph/pay) po",
             "<http://x.example/a>",
             "I-upload sa gcash-pay.ph/upload.",

@@ -1,0 +1,150 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, tenant_id, to_address, from_name, reply_to, subject, body_text,\n                    approved_hash, may_have_sent, first_send_at, send_attempts\n             from outbox_messages\n             where (status = 'approved' or (status = 'failed' and retry_at <= $1))\n               and (first_send_at is not null\n                    or (expires_at is null and $3) or (expires_at > $1 and $2))\n             order by expires_at nulls first, approved_at\n             limit 1\n             for update skip locked",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "tenant_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "to_address",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "to_address"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "from_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "from_name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "reply_to",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "reply_to"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "subject",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "subject"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "body_text",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "body_text"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "approved_hash",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "approved_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "may_have_sent",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "may_have_sent"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "first_send_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "first_send_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "send_attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "send_attempts"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "0c03d5ecdfa9d576febe1b19a87716920d0e3f5dda0bb9ba1ae67ae1541bcc89"
+}

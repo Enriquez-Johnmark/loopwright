@@ -13,15 +13,15 @@ use time::OffsetDateTime;
 pub use cipher::{FileCipher, MasterKey, Sealed};
 pub use store::{FileStore, LocalDisk};
 
-use crate::engine::audit::{self, AuditEvent};
-use crate::engine::clock::Clock;
-use crate::engine::ids::{FileId, TenantId};
+use crate::audit::{self, AuditEvent};
+use crate::clock::Clock;
+use crate::ids::{FileId, TenantId};
 
 /// Problems with keys or stored files.
 #[derive(Debug, thiserror::Error)]
 pub enum FileError {
     /// The master key isn't 64 hex digits.
-    #[error("the master key must be 64 hex digits (`kompleto gen-key` makes one)")]
+    #[error("the master key must be 64 hex digits (e.g. `openssl rand -hex 32`)")]
     BadMasterKey,
     /// The file or its key was changed, swapped or belongs elsewhere.
     #[error("the file can't be decrypted")]

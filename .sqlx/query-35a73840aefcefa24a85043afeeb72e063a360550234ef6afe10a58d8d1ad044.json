@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update outbox_messages\n             set status = 'approved', approved_hash = $3, approved_at = $4, approved_by = $5, updated_at = $4\n             where id = $1 and tenant_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bytea",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "35a73840aefcefa24a85043afeeb72e063a360550234ef6afe10a58d8d1ad044"
+}

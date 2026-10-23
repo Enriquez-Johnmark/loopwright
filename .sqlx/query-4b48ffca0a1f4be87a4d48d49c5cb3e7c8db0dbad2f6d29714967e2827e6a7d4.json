@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select count(*) as \"calls!\", coalesce(sum(input_tokens), 0)::bigint as \"input!\",\n                  coalesce(sum(output_tokens), 0)::bigint as \"output!\",\n                  coalesce(sum(cost_nano_usd), 0)::bigint as \"cost!\"\n           from llm_calls where tenant_id = $1 and at >= $2 and at < $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "calls!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "input!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "output!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "cost!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "4b48ffca0a1f4be87a4d48d49c5cb3e7c8db0dbad2f6d29714967e2827e6a7d4"
+}

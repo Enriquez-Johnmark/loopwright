@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update outbox_messages set status = 'cancelled', updated_at = $3 where id = $1 and tenant_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e167fb84627fb1799351d10e5891501907623981829cba6deecc921802e6d1b9"
+}

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update outbox_messages\n                     set status = 'sent', provider_message_id = $3, sent_at = $4, last_error = null, updated_at = $4\n                     where id = $1 and tenant_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b66af43da84a092a2c936644b6d903ed1610ef9637b33fe4cf2c562c88258847"
+}

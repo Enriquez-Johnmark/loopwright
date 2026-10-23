@@ -1,5 +1,11 @@
-//! The reusable engine. It must never depend on `crate::kompleto`
-//! (ADR 0001); `tests/engine_boundary.rs` enforces this.
+//! Loopwright: a durable engine for human-approved reminder loops. A
+//! product drafts a message; a person approves it; the outbox sends it
+//! exactly once, even across crashes; replies and bounces come back and
+//! stop the loop; every step is audited and scoped to one tenant.
+//!
+//! Products depend on a tagged version of this crate. The engine knows
+//! nothing about any product: brand text, message templates and schedules
+//! live in the product.
 
 pub mod audit;
 pub mod clock;
