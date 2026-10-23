@@ -1,0 +1,18 @@
+# Local development only: Postgres for the engine's tests.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: kompleto
+      POSTGRES_PASSWORD: kompleto
+      POSTGRES_DB: loopwright
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kompleto"]
+      interval: 2s
+      retries: 30
+volumes:
+  pgdata:
