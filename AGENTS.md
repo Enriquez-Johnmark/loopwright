@@ -2,7 +2,7 @@
 
 **Loopwright** is a reusable Rust engine for human-approved reminder loops: a product drafts a message, a person approves it, the outbox sends it exactly once (even across crashes), replies and bounces come back and stop the loop, and every step is audited and scoped to one tenant. It is AGPL-3.0-only.
 
-Products depend on it by tag (`loopwright = { git = "https://github.com/Enriquez-Johnmark/loopwright", tag = "vX.Y.Z" }`). The first product is Kompleto (bookkeepers); Balanse, Kotasyon, Biyahe, Iskedyul and Resibo follow, each in its own repository.
+Products depend on a release, naming its version and the commit its tag points to (`loopwright = { version = "X.Y.Z", git = "https://github.com/Enriquez-Johnmark/loopwright", rev = "<commit>" }`), so a moved tag can never change what a product builds. The first product is Kompleto (bookkeepers); Balanse, Kotasyon, Biyahe, Iskedyul and Resibo follow, each in its own repository.
 
 ## What belongs here
 
