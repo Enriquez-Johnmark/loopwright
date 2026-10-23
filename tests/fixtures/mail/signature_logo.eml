@@ -1,0 +1,29 @@
+From: Nena Cruz <nena@example.test>
+To: <{{TO}}>
+Subject: Re: Mga dokumento
+Date: Mon, 2 Nov 2026 09:20:00 +0800
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="m1"
+
+--m1
+Content-Type: multipart/related; boundary="r1"
+
+--r1
+Content-Type: text/html; charset=utf-8
+
+<p>Eto po.</p><p><img src="cid:logo@nena"> Nena&#39;s Sari-Sari Store</p>
+--r1
+Content-Type: image/png; name="logo.png"
+Content-Disposition: inline; filename="logo.png"
+Content-ID: <logo@nena>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgogYSBzaWduYXR1cmUgbG9nbw==
+--r1--
+--m1
+Content-Type: image/jpeg; name="IMG_0412.jpg"
+Content-Disposition: inline; filename="IMG_0412.jpg"
+Content-Transfer-Encoding: base64
+
+/9j/4CBhIHBob3RvIG9mIGEgcmVjZWlwdA==
+--m1--

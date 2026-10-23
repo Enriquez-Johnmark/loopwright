@@ -1,0 +1,24 @@
+From: Nena Cruz <nena@example.test>
+To: <{{TO}}>
+Subject: Re: Mga dokumento
+Date: Mon, 2 Nov 2026 09:15:00 +0800
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset=utf-8
+
+Eto po ang resibo.
+--b1
+Content-Type: image/jpeg; name="resibo.jpg"
+Content-Disposition: attachment; filename="resibo.jpg"
+Content-Transfer-Encoding: base64
+
+/9j/4CBhIHBob3RvIG9mIGEgcmVjZWlwdA==
+--b1
+Content-Type: application/octet-stream; name="resibo.jpg.exe"
+Content-Disposition: attachment; filename="resibo.jpg.exe"
+Content-Transfer-Encoding: base64
+
+TVqQACBub3QgYSBwaG90bw==
+--b1--
