@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "update outbox_messages set status = 'expired', updated_at = $1\n             where (status = 'draft' or (status = 'approved' and first_send_at is null))\n               and expires_at <= $1\n             returning id, tenant_id",
+  "query": "update outbox_messages set status = 'expired', updated_at = $1\n             where (status = 'draft'\n                    or (status = 'approved' and first_send_at is null and not deadline_for_approval_only))\n               and expires_at <= $1\n             returning id, tenant_id",
   "describe": {
     "columns": [
       {
@@ -36,5 +36,5 @@
       false
     ]
   },
-  "hash": "327c1b9756b61e3002a2dec694af9130457fb435675c96a4cb1e91b5dbc91bf6"
+  "hash": "49dcf7f26af65d0c845ecfdaf2c6bb987311cee88618a09cc557f1307b7d4300"
 }

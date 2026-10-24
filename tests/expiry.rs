@@ -199,3 +199,42 @@ async fn a_deferred_message_can_still_be_cancelled(pool: PgPool) {
 
     assert_eq!(outbox.get(tenant, id).await.unwrap().status, MessageStatus::Cancelled);
 }
+
+#[sqlx::test]
+async fn a_deadline_for_approval_stops_mattering_once_the_message_is_approved(pool: PgPool) {
+    let clock = clock();
+    let outbox = Outbox::new(pool.clone(), clock.clone());
+    let tenant = TenantId::new();
+    let approve_by = clock.now_plus(Duration::hours(1));
+    let mut tx = pool.begin().await.unwrap();
+    let approved = outbox
+        .create_draft_to_approve_by_in(&mut tx, tenant, &sample_email(), approve_by)
+        .await
+        .unwrap();
+    let unapproved = outbox
+        .create_draft_to_approve_by_in(&mut tx, tenant, &sample_email(), approve_by)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let seen = outbox.get(tenant, approved).await.unwrap().content_hash();
+    outbox
+        .approve(tenant, approved, "ana@santos.test", &seen, &NoExtraChecks)
+        .await
+        .unwrap();
+
+    // Held past the deadline, say by sending hours, before the sender ran.
+    clock.advance(Duration::hours(2));
+    outbox.expire_overdue().await.unwrap();
+    let mailer = RecordingMailer::idempotent();
+    Sender::new(pool, mailer.clone(), clock, Arc::new(NoExtraChecks))
+        .drain_once(10)
+        .await
+        .unwrap();
+
+    assert_eq!(
+        outbox.get(tenant, unapproved).await.unwrap().status,
+        MessageStatus::Expired
+    );
+    assert_eq!(outbox.get(tenant, approved).await.unwrap().status, MessageStatus::Sent);
+    assert_eq!(mailer.calls().len(), 1);
+}

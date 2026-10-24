@@ -230,7 +230,8 @@ impl Outbox {
 
     /// [`Outbox::create_draft`] inside the caller's transaction, so the
     /// Draft commits or rolls back with the caller's own changes. A Draft
-    /// still unapproved at `expires_at` expires and is never sent (D4).
+    /// still unapproved at `expires_at` expires and is never sent (D4), and
+    /// so does one approved but not yet sending by then.
     pub async fn create_draft_in(
         &self,
         tx: &mut Transaction<'_, Postgres>,
@@ -238,14 +239,38 @@ impl Outbox {
         email: &Email,
         expires_at: Option<OffsetDateTime>,
     ) -> Result<MessageId, OutboxError> {
+        self.insert_draft(tx, tenant, email, expires_at, false).await
+    }
+
+    /// [`Outbox::create_draft_in`] with a deadline for approval only: a
+    /// Draft still unapproved at `approve_by` expires, but once approved it
+    /// waits as long as its pre-send checks hold it, and is sent then.
+    pub async fn create_draft_to_approve_by_in(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+        tenant: TenantId,
+        email: &Email,
+        approve_by: OffsetDateTime,
+    ) -> Result<MessageId, OutboxError> {
+        self.insert_draft(tx, tenant, email, Some(approve_by), true).await
+    }
+
+    async fn insert_draft(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+        tenant: TenantId,
+        email: &Email,
+        expires_at: Option<OffsetDateTime>,
+        for_approval_only: bool,
+    ) -> Result<MessageId, OutboxError> {
         validate(email)?;
         let id = MessageId::new();
         let now = self.clock.now();
         sqlx::query!(
             "insert into outbox_messages
                 (id, tenant_id, status, to_address, from_name, reply_to, subject, body_text, created_at, updated_at,
-                 expires_at)
-             values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $8, $9)",
+                 expires_at, deadline_for_approval_only)
+             values ($1, $2, 'draft', $3, $4, $5, $6, $7, $8, $8, $9, $10)",
             id.as_uuid(),
             tenant.as_uuid(),
             email.to_address,
@@ -255,6 +280,7 @@ impl Outbox {
             email.body_text,
             now,
             expires_at,
+            for_approval_only,
         )
         .execute(&mut **tx)
         .await?;
@@ -428,13 +454,15 @@ impl Outbox {
 
     /// Expires every Draft past its deadline, and every approved message
     /// held back so long that its deadline passed before it started to
-    /// send, across all tenants (a system-wide sweep); returns how many.
+    /// send (unless the deadline was for approval only), across all tenants
+    /// (a system-wide sweep); returns how many.
     pub async fn expire_overdue(&self) -> Result<u64, OutboxError> {
         let now = self.clock.now();
         let mut tx = self.pool.begin().await?;
         let expired = sqlx::query!(
             "update outbox_messages set status = 'expired', updated_at = $1
-             where (status = 'draft' or (status = 'approved' and first_send_at is null))
+             where (status = 'draft'
+                    or (status = 'approved' and first_send_at is null and not deadline_for_approval_only))
                and expires_at <= $1
              returning id, tenant_id",
             now,

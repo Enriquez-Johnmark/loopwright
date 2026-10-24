@@ -216,7 +216,8 @@ impl<M: Mailer> Sender<M> {
             }
         };
         // Nearest deadline first; messages without one before all. One held
-        // past its deadline never goes out late: `expire_overdue` ends it.
+        // past its deadline never goes out late: `expire_overdue` ends it,
+        // unless that deadline was for approval only.
         let Some(row) = sqlx::query!(
             "select id, tenant_id, to_address, from_name, reply_to, subject, body_text,
                     approved_hash, may_have_sent, first_send_at, send_attempts
@@ -224,7 +225,8 @@ impl<M: Mailer> Sender<M> {
              where ((status = 'approved' and (retry_at is null or retry_at <= $1))
                     or (status = 'failed' and retry_at <= $1))
                and (first_send_at is not null
-                    or (expires_at is null and $3) or (expires_at > $1 and $2))
+                    or (expires_at is null and $3)
+                    or ((expires_at > $1 or deadline_for_approval_only) and $2))
              order by expires_at nulls first, approved_at
              limit 1
              for update skip locked",

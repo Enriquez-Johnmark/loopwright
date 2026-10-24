@@ -6,7 +6,9 @@ Every release, newest first, with what changed and what a product must do to upg
 
 - **Fixed: a deferred message could be stuck for good.** When a pre-send check couldn't run (`CheckFailed::Unavailable`), the message became `failed` without ever starting to send. Once its deadline passed, the sender skipped it and `expire_overdue` didn't sweep it, so it stayed `failed` forever, and `cancel` refused it. A deferred message now stays `approved` with a retry time, so it expires at its deadline and can be cancelled.
 - **New: `CheckFailed::NotUntil { until, reason }`** for a message that is fine but may not go out yet (say, outside sending hours). Approval goes ahead; the sender holds the message, still approved, and doesn't claim it again before `until`, rather than re-checking it every minute as with `Unavailable`. **Breaking:** `CheckFailed` gains a variant and is now `#[non_exhaustive]`, so a `match` on it needs a wildcard arm.
+- **New: `Outbox::create_draft_to_approve_by_in`** creates a Draft whose deadline is for approval only. Unapproved by then, it expires as before; once approved, it is sent whenever its pre-send checks allow, however long they hold it. `create_draft_in` keeps its meaning: an approved message not yet sending at its deadline expires unsent.
 - **Migration `20261025000000_deferred_messages_stay_approved`:** messages already deferred the old way (`failed`, never started) become `approved` again.
+- **Migration `20261025010000_approval_deadlines`:** adds `outbox_messages.deadline_for_approval_only` (false for every existing message).
 
 ## v0.3.0 (2026-10-24)
 
