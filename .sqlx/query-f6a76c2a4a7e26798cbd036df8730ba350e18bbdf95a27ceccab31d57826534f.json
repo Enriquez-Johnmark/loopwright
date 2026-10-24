@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update accounts set closed_at = $2, erase_after = $3 where tenant_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f6a76c2a4a7e26798cbd036df8730ba350e18bbdf95a27ceccab31d57826534f"
+}

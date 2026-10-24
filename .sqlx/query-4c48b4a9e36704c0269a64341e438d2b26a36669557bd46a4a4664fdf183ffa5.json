@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update accounts a set closed_at = null, erase_after = null\n             from account_members m\n             where m.tenant_id = a.tenant_id and m.role = 'owner' and lower(m.email) = lower($1)\n               and a.closed_at is not null and a.erase_after > $2\n             returning a.tenant_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tenant_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "accounts",
+            "name": "tenant_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4c48b4a9e36704c0269a64341e438d2b26a36669557bd46a4a4664fdf183ffa5"
+}

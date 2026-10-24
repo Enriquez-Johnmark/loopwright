@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from accounts where tenant_id = $1 and erase_after <= $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9f6cb815703eb2f8288d4f7c4994b534d2b6db5dd23c341eb282420e22db51fc"
+}
