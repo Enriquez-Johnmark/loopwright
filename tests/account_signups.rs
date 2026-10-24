@@ -111,3 +111,19 @@ async fn declining_a_request_removes_it(pool: PgPool) {
 
     assert!(signups.pending().await.unwrap().is_empty());
 }
+
+#[sqlx::test]
+async fn a_request_from_the_owner_of_a_closed_account_is_answered_but_not_kept(pool: PgPool) {
+    let clock = clock();
+    let accounts = Accounts::new(pool.clone(), clock.clone());
+    let tenant = accounts.create("Reyes Creative", "ana@reyes.test").await.unwrap();
+    accounts
+        .close(tenant, "Reyes Creative", "ana@reyes.test")
+        .await
+        .unwrap();
+    let signups = Signups::new(pool, clock);
+
+    signups.request("Reyes Again", "ana@reyes.test", true).await.unwrap();
+
+    assert!(signups.pending().await.unwrap().is_empty());
+}

@@ -74,8 +74,9 @@ impl Signups {
     }
 
     /// Records a request for an account named `name`, owned by `email`.
-    /// `Ok` also when the address already logs in, so the answer doesn't
-    /// reveal who has an account; such a request isn't kept.
+    /// `Ok` also when the address already belongs to an account, open or
+    /// closed, so the answer doesn't reveal who has one; such a request
+    /// isn't kept.
     pub async fn request(&self, name: &str, email: &str, accepted_terms: bool) -> Result<(), SignupError> {
         let (name, email) = (name.trim(), email.trim());
         let mut problems = Vec::new();
@@ -111,14 +112,14 @@ impl Signups {
         .fetch_one(&mut *tx)
         .await?;
         // Checked before anything about the address, so a full queue answers
-        // members and strangers alike.
+        // members and strangers alike. A closed account still holds its
+        // members' addresses until it is erased, so they count too.
         if counts.pending >= MAX_PENDING || counts.last_hour >= MAX_PER_HOUR {
             return Err(SignupError::TooMany);
         }
         let member = sqlx::query_scalar!(
             r#"select exists (
-                   select 1 from account_members m join accounts a on a.tenant_id = m.tenant_id
-                   where a.closed_at is null and lower(m.email) = lower($1)
+                   select 1 from account_members where lower(email) = lower($1)
                ) as "member!""#,
             email
         )

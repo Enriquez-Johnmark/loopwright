@@ -156,9 +156,20 @@ pub fn check_name(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Whether `email` looks like an address a login link can go to.
+/// Whether `email` looks like one plain address a login link can go to:
+/// one `@` with text on both sides, and nothing that could make a mail
+/// provider read it as a list or a display name.
 pub fn is_email_address(email: &str) -> bool {
-    email.len() <= 254 && email.contains('@') && !email.chars().any(|c| c.is_whitespace() || c.is_control())
+    let Some((local, domain)) = email.split_once('@') else {
+        return false;
+    };
+    email.len() <= 254
+        && !local.is_empty()
+        && !domain.is_empty()
+        && !domain.contains('@')
+        && !email
+            .chars()
+            .any(|c| c.is_whitespace() || c.is_control() || matches!(c, ',' | ';' | '<' | '>' | '"' | '(' | ')'))
 }
 
 /// Turns the unique-address violation into [`AccountError::EmailTaken`].

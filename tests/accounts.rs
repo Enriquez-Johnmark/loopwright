@@ -58,3 +58,25 @@ async fn get_of_an_unknown_tenant_is_not_found(pool: PgPool) {
 
     assert!(matches!(err, AccountError::NotFound), "got {err:?}");
 }
+
+#[sqlx::test]
+async fn create_refuses_a_list_of_addresses(pool: PgPool) {
+    let accounts = Accounts::new(pool, clock());
+
+    let err = accounts
+        .create("Reyes Creative", "ana@reyes.test,spy@else.test")
+        .await
+        .unwrap_err();
+
+    assert!(matches!(err, AccountError::Invalid(_)), "got {err:?}");
+}
+
+#[test]
+fn an_address_has_exactly_one_at_sign_with_text_on_both_sides() {
+    let accepted: Vec<bool> = ["ana@reyes.test", "@reyes.test", "ana@", "a@b@c", "Ana <ana@reyes.test>"]
+        .into_iter()
+        .map(nudgewright::accounts::is_email_address)
+        .collect();
+
+    assert_eq!(accepted, [true, false, false, false, false]);
+}
