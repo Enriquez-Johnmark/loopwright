@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select id, tenant_id, to_address, from_name, reply_to, subject, body_text,\n                    approved_hash, may_have_sent, first_send_at, send_attempts\n             from outbox_messages\n             where (status = 'approved' or (status = 'failed' and retry_at <= $1))\n               and (first_send_at is not null\n                    or (expires_at is null and $3) or (expires_at > $1 and $2))\n             order by expires_at nulls first, approved_at\n             limit 1\n             for update skip locked",
+  "query": "select id, tenant_id, to_address, from_name, reply_to, subject, body_text,\n                    approved_hash, may_have_sent, first_send_at, send_attempts\n             from outbox_messages\n             where ((status = 'approved' and (retry_at is null or retry_at <= $1))\n                    or (status = 'failed' and retry_at <= $1))\n               and (first_send_at is not null\n                    or (expires_at is null and $3) or (expires_at > $1 and $2))\n             order by expires_at nulls first, approved_at\n             limit 1\n             for update skip locked",
   "describe": {
     "columns": [
       {
@@ -146,5 +146,5 @@
       false
     ]
   },
-  "hash": "0c03d5ecdfa9d576febe1b19a87716920d0e3f5dda0bb9ba1ae67ae1541bcc89"
+  "hash": "495d01a1f8b718258c4cb3f8f38b330a52d870e353d40ad16a02d1b8715669a2"
 }

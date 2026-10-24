@@ -367,7 +367,8 @@ impl Outbox {
         }
         sqlx::query!(
             "update outbox_messages
-             set status = 'approved', approved_hash = $3, approved_at = $4, approved_by = $5, updated_at = $4
+             set status = 'approved', approved_hash = $3, approved_at = $4, approved_by = $5, retry_at = null,
+                 updated_at = $4
              where id = $1 and tenant_id = $2",
             id.as_uuid(),
             tenant.as_uuid(),

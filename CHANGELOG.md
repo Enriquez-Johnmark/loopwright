@@ -2,6 +2,11 @@
 
 Every release, newest first, with what changed and what a product must do to upgrade. Versions follow `AGENTS.md`: while at `0.x`, a breaking change bumps the minor number.
 
+## Unreleased
+
+- **Fixed: a deferred message could be stuck for good.** When a pre-send check couldn't run (`CheckFailed::Unavailable`), the message became `failed` without ever starting to send. Once its deadline passed, the sender skipped it and `expire_overdue` didn't sweep it, so it stayed `failed` forever, and `cancel` refused it. A deferred message now stays `approved` with a retry time, so it expires at its deadline and can be cancelled.
+- **Migration `20261025000000_deferred_messages_stay_approved`:** messages already deferred the old way (`failed`, never started) become `approved` again.
+
 ## v0.3.0 (2026-10-24)
 
 Two new modules, moved from Kompleto because a second product (Balanse) needs them. Nothing existing changed, so upgrading needs no code changes.

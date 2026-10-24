@@ -173,8 +173,8 @@ async fn d7_a_check_that_couldnt_run_leaves_the_message_to_try_again(pool: PgPoo
     assert_eq!(report.blocked, 0);
     assert_eq!(
         outbox.get(tenant, id).await.unwrap().status,
-        MessageStatus::Failed,
-        "left to try again"
+        MessageStatus::Approved,
+        "left, still approved, to try again"
     );
     clock.advance(time::Duration::minutes(1));
     Sender::new(pool, mailer.clone(), clock, Arc::new(NoExtraChecks))

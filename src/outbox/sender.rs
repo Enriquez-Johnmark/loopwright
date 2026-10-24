@@ -221,7 +221,8 @@ impl<M: Mailer> Sender<M> {
             "select id, tenant_id, to_address, from_name, reply_to, subject, body_text,
                     approved_hash, may_have_sent, first_send_at, send_attempts
              from outbox_messages
-             where (status = 'approved' or (status = 'failed' and retry_at <= $1))
+             where ((status = 'approved' and (retry_at is null or retry_at <= $1))
+                    or (status = 'failed' and retry_at <= $1))
                and (first_send_at is not null
                     or (expires_at is null and $3) or (expires_at > $1 and $2))
              order by expires_at nulls first, approved_at
@@ -475,7 +476,8 @@ fn failpoint(name: &str) {
 fn failpoint(_name: &str) {}
 
 /// Leaves a message for a later attempt after its pre-send check couldn't
-/// run. It keeps its approval and attempt count.
+/// run. It stays approved, with its attempt count, so it can still be
+/// cancelled and still expires at its deadline.
 async fn defer(
     tx: &mut Transaction<'_, Postgres>,
     tenant: TenantId,
@@ -484,7 +486,7 @@ async fn defer(
     reason: &str,
 ) -> Result<(), OutboxError> {
     sqlx::query!(
-        "update outbox_messages set status = 'failed', retry_at = $3, last_error = $4, updated_at = $3
+        "update outbox_messages set retry_at = $3, last_error = $4, updated_at = $3
          where id = $1 and tenant_id = $2",
         id.as_uuid(),
         tenant.as_uuid(),

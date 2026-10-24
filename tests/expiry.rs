@@ -123,3 +123,79 @@ async fn a_discarded_draft_can_never_be_approved(pool: PgPool) {
         Err(OutboxError::NotFound)
     ));
 }
+
+/// A product rule whose lookup can't run, so every send is deferred.
+struct CantCheck;
+
+impl nudgewright::outbox::PreSendCheck for CantCheck {
+    fn check<'a>(
+        &'a self,
+        _: TenantId,
+        _: nudgewright::ids::MessageId,
+        _: &'a nudgewright::mail::Email,
+    ) -> nudgewright::outbox::BoxFuture<'a, Result<(), nudgewright::outbox::CheckFailed>> {
+        Box::pin(async {
+            Err(nudgewright::outbox::CheckFailed::Unavailable(
+                "pool timed out".to_owned(),
+            ))
+        })
+    }
+}
+
+/// An approved message with a deadline in an hour, deferred once by a check
+/// that couldn't run.
+async fn deferred(
+    pool: &PgPool,
+    clock: &Arc<nudgewright::clock::FixedClock>,
+) -> (Outbox, TenantId, nudgewright::ids::MessageId) {
+    let outbox = Outbox::new(pool.clone(), clock.clone());
+    let tenant = TenantId::new();
+    let mut tx = pool.begin().await.unwrap();
+    let id = outbox
+        .create_draft_in(
+            &mut tx,
+            tenant,
+            &sample_email(),
+            Some(clock.now_plus(Duration::hours(1))),
+        )
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let seen = outbox.get(tenant, id).await.unwrap().content_hash();
+    outbox
+        .approve(tenant, id, "ana@santos.test", &seen, &NoExtraChecks)
+        .await
+        .unwrap();
+    Sender::new(
+        pool.clone(),
+        RecordingMailer::idempotent(),
+        clock.clone(),
+        Arc::new(CantCheck),
+    )
+    .drain_once(10)
+    .await
+    .unwrap();
+    (outbox, tenant, id)
+}
+
+#[sqlx::test]
+async fn d4_a_deferred_message_still_unsent_at_its_deadline_expires(pool: PgPool) {
+    let clock = clock();
+    let (outbox, tenant, id) = deferred(&pool, &clock).await;
+
+    clock.advance(Duration::hours(1));
+    let swept = outbox.expire_overdue().await.unwrap();
+
+    assert_eq!(swept, 1);
+    assert_eq!(outbox.get(tenant, id).await.unwrap().status, MessageStatus::Expired);
+}
+
+#[sqlx::test]
+async fn a_deferred_message_can_still_be_cancelled(pool: PgPool) {
+    let clock = clock();
+    let (outbox, tenant, id) = deferred(&pool, &clock).await;
+
+    outbox.cancel(tenant, id, "ana@santos.test").await.unwrap();
+
+    assert_eq!(outbox.get(tenant, id).await.unwrap().status, MessageStatus::Cancelled);
+}
