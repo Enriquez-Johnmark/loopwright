@@ -6,6 +6,8 @@
 //! pages, routes and email wording, and point their per-tenant tables at
 //! `accounts (tenant_id)` so erasing an account removes their rows too.
 
+mod members;
+
 use std::sync::Arc;
 
 use sqlx::{PgConnection, PgPool};
@@ -14,6 +16,8 @@ use time::OffsetDateTime;
 use crate::clock::Clock;
 use crate::ids::{TenantId, id_type};
 use crate::outbox::links;
+
+pub use members::{MAX_STAFF, Member, MemberError, Members, Role};
 
 id_type!(
     /// One person who logs in to an account.

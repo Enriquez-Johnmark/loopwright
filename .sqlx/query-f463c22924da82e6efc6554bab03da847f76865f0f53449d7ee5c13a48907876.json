@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select tenant_id from accounts where tenant_id = $1 and closed_at is null for update",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tenant_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "accounts",
+            "name": "tenant_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f463c22924da82e6efc6554bab03da847f76865f0f53449d7ee5c13a48907876"
+}

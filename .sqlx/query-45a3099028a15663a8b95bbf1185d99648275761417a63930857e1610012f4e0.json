@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into account_members (id, tenant_id, email, role, created_at) values ($1, $2, $3, 'staff', $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "45a3099028a15663a8b95bbf1185d99648275761417a63930857e1610012f4e0"
+}
