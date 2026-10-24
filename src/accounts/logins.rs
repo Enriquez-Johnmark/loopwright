@@ -1,7 +1,8 @@
 //! Login by one-time email link, and sessions.
 //!
-//! - A link works once, for [`LINK_LIFETIME`]. Only the SHA-256 hash of its
-//!   token is stored.
+//! - A link works once, for [`LINK_LIFETIME`]. The token table holds only
+//!   its SHA-256 hash; the email carrying it stays in the outbox, and a
+//!   draft of it that isn't approved is cancelled at once.
 //! - The email goes through the outbox like every other message, approved
 //!   automatically as [`LOGIN_APPROVER`], the one kind of message that may
 //!   be. It always goes to the member's own address.
@@ -125,13 +126,17 @@ impl Logins {
         };
         let tenant = TenantId::from(member.tenant_id);
         // Locking the account serialises its requests, so parallel ones
-        // can't all pass the limits before any of them is counted.
-        sqlx::query!(
-            "select tenant_id from accounts where tenant_id = $1 for update",
+        // can't all pass the limits before any of them is counted. Checked
+        // open again under the lock, in case it closed since the lookup.
+        let open = sqlx::query!(
+            "select tenant_id from accounts where tenant_id = $1 and closed_at is null for update",
             tenant.as_uuid()
         )
-        .fetch_one(&mut *tx)
+        .fetch_optional(&mut *tx)
         .await?;
+        if open.is_none() {
+            return Ok(LoginOutcome::NotSent);
+        }
         // Counted from the outbox, which keeps the emails of removed members
         // too: removing and adding an address again can't reset its limit.
         let recent = sqlx::query!(
@@ -170,10 +175,28 @@ impl Logins {
             to_address: member.email.clone(),
             ..compose(&link)
         };
-        let id = self.outbox.create_draft_in(&mut tx, tenant, &email, None).await?;
+        // The draft holds a working link, so it expires with the link.
+        let id = self
+            .outbox
+            .create_draft_in(&mut tx, tenant, &email, Some(now + LINK_LIFETIME))
+            .await?;
         tx.commit().await?;
-        let hash = self.outbox.get(tenant, id).await?.content_hash();
-        self.outbox.approve(tenant, id, LOGIN_APPROVER, &hash, checks).await?;
+        let approved = match self.outbox.get(tenant, id).await {
+            Ok(draft) => {
+                self.outbox
+                    .approve(tenant, id, LOGIN_APPROVER, &draft.content_hash(), checks)
+                    .await
+            }
+            Err(err) => Err(err),
+        };
+        if let Err(err) = approved {
+            // Never leave a draft holding a working link where a person could
+            // read, edit or approve it.
+            if let Err(cancel) = self.outbox.cancel(tenant, id, LOGIN_APPROVER).await {
+                tracing::error!(%tenant, %cancel, "cancelling an unapproved login email failed");
+            }
+            return Err(err.into());
+        }
         Ok(LoginOutcome::Sent)
     }
 

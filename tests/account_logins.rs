@@ -12,9 +12,10 @@ use nudgewright::accounts::{
     SESSION_LIFETIME,
 };
 use nudgewright::clock::FixedClock;
+use nudgewright::ids::MessageId;
 use nudgewright::ids::TenantId;
 use nudgewright::mail::Email;
-use nudgewright::outbox::NoExtraChecks;
+use nudgewright::outbox::{BoxFuture, CheckFailed, NoExtraChecks, PreSendCheck};
 use sqlx::PgPool;
 use time::Duration;
 
@@ -227,4 +228,49 @@ async fn removing_a_staff_member_ends_their_session(pool: PgPool) {
     members.remove_staff(tenant, ben.id, "ana@reyes.test").await.unwrap();
 
     assert_eq!(logins.session(&secret).await.unwrap(), None);
+}
+
+/// A product rule that refuses every message.
+struct RefuseAll;
+
+impl PreSendCheck for RefuseAll {
+    fn check<'a>(&'a self, _: TenantId, _: MessageId, _: &'a Email) -> BoxFuture<'a, Result<(), CheckFailed>> {
+        Box::pin(async { Err(CheckFailed::Refused("no".to_owned())) })
+    }
+}
+
+#[sqlx::test]
+async fn a_refused_login_email_leaves_no_draft_waiting(pool: PgPool) {
+    let clock = clock();
+    account(&pool, &clock).await;
+    let logins = Logins::new(pool.clone(), clock);
+
+    logins
+        .send_link("ana@reyes.test", compose, &RefuseAll)
+        .await
+        .unwrap_err();
+
+    let waiting = sqlx::query_scalar::<_, i64>("select count(*) from outbox_messages where status = 'draft'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(waiting, 0);
+}
+
+#[sqlx::test]
+async fn a_login_draft_expires_with_its_link(pool: PgPool) {
+    let clock = clock();
+    account(&pool, &clock).await;
+    let logins = Logins::new(pool.clone(), clock.clone());
+
+    logins
+        .send_link("ana@reyes.test", compose, &NoExtraChecks)
+        .await
+        .unwrap();
+
+    let expires = sqlx::query_scalar::<_, Option<time::OffsetDateTime>>("select expires_at from outbox_messages")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(expires, Some(clock.now_plus(LINK_LIFETIME)));
 }

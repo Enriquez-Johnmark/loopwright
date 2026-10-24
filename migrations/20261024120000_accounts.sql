@@ -29,8 +29,9 @@ create table account_members (
 create unique index account_members_email on account_members (lower(email));
 create unique index account_members_one_owner on account_members (tenant_id) where role = 'owner';
 
--- Login links and sessions. Only SHA-256 hashes of the secrets are stored,
--- so a database leak doesn't hand out working links or sessions. Both
+-- Login links and sessions. These tables hold only SHA-256 hashes of the
+-- secrets. A session's secret is stored nowhere else; a link's also sits in
+-- its login email in the outbox, where it works once, for 15 minutes. Both
 -- belong to a person and go with them.
 create table account_login_tokens (
     token_hash  bytea primary key,
