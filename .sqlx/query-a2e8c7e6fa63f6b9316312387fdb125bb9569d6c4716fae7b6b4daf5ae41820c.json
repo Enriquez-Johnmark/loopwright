@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select exists (\n                   select 1 from account_members m join accounts a on a.tenant_id = m.tenant_id\n                   where a.closed_at is null and lower(m.email) = lower($1)\n               ) as \"member!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "member!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a2e8c7e6fa63f6b9316312387fdb125bb9569d6c4716fae7b6b4daf5ae41820c"
+}

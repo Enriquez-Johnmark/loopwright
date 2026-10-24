@@ -54,3 +54,17 @@ create table account_sessions (
 );
 
 create index account_sessions_member on account_sessions (member_id);
+
+-- Requests for an account from a public sign-up page. Not owned by any
+-- account: only the operator reads them. A request is deleted once it is
+-- approved or declined, or after 30 days.
+create table account_signup_requests (
+    id           uuid primary key,
+    name         text not null,
+    email        text not null,
+    -- When the requester accepted the product's terms.
+    accepted_at  timestamptz not null,
+    created_at   timestamptz not null
+);
+
+create unique index account_signup_requests_email on account_signup_requests (lower(email));

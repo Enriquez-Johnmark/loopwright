@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from account_signup_requests",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "503cc7ba1f21730efc774476bd9e2ffb657a67566ac39383d4edf80310b85a72"
+}

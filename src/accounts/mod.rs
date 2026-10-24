@@ -8,6 +8,7 @@
 
 mod logins;
 mod members;
+mod signups;
 
 use std::sync::Arc;
 
@@ -23,6 +24,7 @@ pub use logins::{
     MAX_LINKS_PER_HOUR, SESSION_LIFETIME, Session,
 };
 pub use members::{MAX_STAFF, Member, MemberError, Members, Role};
+pub use signups::{AccountRequest, EXPIRES_AFTER_DAYS, MAX_PENDING, MAX_PER_HOUR, RequestId, SignupError, Signups};
 
 id_type!(
     /// One person who logs in to an account.
