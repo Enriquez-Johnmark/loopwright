@@ -12,6 +12,7 @@ use std::time::Duration;
 use calamine::{Data, Reader, Xlsx};
 use rustix::process::{Resource, Rlimit, setrlimit};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::Semaphore;
 
 use super::{MAX_BYTES, MAX_ROWS, SheetError};
 
@@ -26,6 +27,10 @@ const CPU_LIMIT_SECONDS: u64 = 10;
 const MAX_OUTPUT_BYTES: u64 = 16 * 1024 * 1024;
 /// How long to wait for the child.
 const WAIT_LIMIT: Duration = Duration::from_secs(15);
+/// The most children running at once, across every reader.
+const MAX_CHILDREN: usize = 2;
+
+static CHILDREN: Semaphore = Semaphore::const_new(MAX_CHILDREN);
 
 /// Reads .xlsx files through the child process.
 #[derive(Debug, Clone)]
@@ -47,6 +52,11 @@ impl XlsxReader {
             return Err(SheetError::TooLarge);
         }
         let unreadable = || SheetError::Unreadable("it isn't a readable Excel (.xlsx) file".to_owned());
+        // Each child may use 512 MB, so only a few run at once.
+        let _permit = CHILDREN
+            .acquire()
+            .await
+            .map_err(|_| SheetError::Unreadable("the Excel reader is shutting down".to_owned()))?;
         // No environment: a parser taken over by a crafted file finds no
         // database URL or API keys.
         let mut child = tokio::process::Command::new(&self.program)
