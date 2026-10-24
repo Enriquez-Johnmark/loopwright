@@ -35,11 +35,11 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 # When another project in this session already runs Postgres on port 5432
-# (e.g. Kompleto's), use it: just make sure the loopwright database exists.
+# (e.g. Kompleto's), use it: just make sure the nudgewright database exists.
 if (exec 3<>/dev/tcp/127.0.0.1/5432) 2>/dev/null; then
     container=$(docker ps --filter publish=5432 --format '{{.Names}}' | head -1)
     [ -n "$container" ] && docker exec "$container" \
-        psql -U kompleto -d postgres -qc "create database loopwright" >/dev/null 2>&1
+        psql -U kompleto -d postgres -qc "create database nudgewright" >/dev/null 2>&1
 else
     # Docker Hub rate-limits anonymous pulls (429); mirror.gcr.io serves the
     # same official images.

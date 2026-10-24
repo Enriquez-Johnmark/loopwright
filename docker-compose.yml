@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: kompleto
       POSTGRES_PASSWORD: kompleto
-      POSTGRES_DB: loopwright
+      POSTGRES_DB: nudgewright
     ports:
       - "127.0.0.1:5432:5432"
     volumes:

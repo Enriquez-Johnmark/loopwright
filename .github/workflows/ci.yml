@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_USER: kompleto
           POSTGRES_PASSWORD: kompleto
-          POSTGRES_DB: loopwright
+          POSTGRES_DB: nudgewright
         ports:
           - 5432:5432
         options: >-
@@ -24,7 +24,7 @@ jobs:
           --health-interval 2s
           --health-retries 30
     env:
-      DATABASE_URL: postgres://kompleto:kompleto@localhost:5432/loopwright
+      DATABASE_URL: postgres://kompleto:kompleto@localhost:5432/nudgewright
       # Compile SQL checks from the committed .sqlx/ data; tests still run
       # against the real Postgres service.
       SQLX_OFFLINE: "true"
