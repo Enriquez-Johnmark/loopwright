@@ -19,6 +19,7 @@ pub mod llm;
 pub mod mail;
 pub mod outbox;
 pub mod scan;
+pub mod sheets;
 pub mod signed;
 pub mod tenants;
 pub mod webhooks;
