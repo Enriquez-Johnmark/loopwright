@@ -2,7 +2,7 @@
 
 #![allow(clippy::unwrap_used, reason = "test code: a failed unwrap is a failed test")]
 
-use nudgewright::sheets::{MAX_BYTES, SheetError, read_csv, squash};
+use nudgewright::sheets::{MAX_BYTES, MAX_ROWS, SheetError, read_csv, squash};
 
 #[test]
 fn rows_carry_their_cells() {
@@ -56,4 +56,13 @@ fn a_file_over_the_limit_is_refused() {
 #[test]
 fn squash_keeps_lowercase_letters_and_digits() {
     assert_eq!(squash("*Contact Name (2)"), "contactname2");
+}
+
+#[test]
+fn reading_stops_one_row_past_the_limit() {
+    let csv = "x\n".repeat(MAX_ROWS + 10);
+
+    let rows = read_csv(csv.as_bytes()).unwrap();
+
+    assert_eq!(rows.len(), MAX_ROWS + 2);
 }
