@@ -7,6 +7,7 @@
 //! nothing about any product: brand text, message templates and schedules
 //! live in the product.
 
+pub mod accounts;
 pub mod audit;
 pub mod clock;
 pub mod cost_log;
