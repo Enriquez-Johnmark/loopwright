@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::process::{ExitCode, Stdio};
 use std::time::Duration;
 
-use calamine::{Reader, Xlsx};
+use calamine::{Data, Reader, Xlsx};
 use rustix::process::{Resource, Rlimit, setrlimit};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -122,11 +122,15 @@ pub fn run_child() -> ExitCode {
 fn cells_from_xlsx(bytes: Vec<u8>) -> Option<Vec<Vec<String>>> {
     let mut workbook = Xlsx::new(Cursor::new(bytes)).ok()?;
     let range = workbook.worksheet_range_at(0)?.ok()?;
-    let first_row = range.start().map_or(0, |(row, _)| row);
+    // The range starts at its first non-empty cell; pad back to A1 so
+    // positions match the spreadsheet's rows and columns.
+    let (first_row, first_column) = range.start().unwrap_or((0, 0));
     let mut cells: Vec<Vec<String>> = (0..first_row).map(|_| Vec::new()).collect();
     let mut non_blank = 0;
     for row in range.rows() {
-        let mut texts: Vec<String> = row.iter().map(ToString::to_string).collect();
+        let mut texts: Vec<String> = std::iter::repeat_n(String::new(), first_column as usize)
+            .chain(row.iter().map(text))
+            .collect();
         while texts.last().is_some_and(String::is_empty) {
             texts.pop();
         }
@@ -138,4 +142,20 @@ fn cells_from_xlsx(bytes: Vec<u8>) -> Option<Vec<Vec<String>>> {
         }
     }
     Some(cells)
+}
+
+/// A cell as text. Dates read as ISO dates (`2026-11-15`, or
+/// `2026-11-15 13:05:00` with a time), not as Excel's serial numbers.
+fn text(cell: &Data) -> String {
+    match cell {
+        Data::DateTime(date) if date.is_datetime() => {
+            let (year, month, day, hour, minute, second, _) = date.to_ymd_hms_milli();
+            if (hour, minute, second) == (0, 0, 0) {
+                format!("{year:04}-{month:02}-{day:02}")
+            } else {
+                format!("{year:04}-{month:02}-{day:02} {hour:02}:{minute:02}:{second:02}")
+            }
+        }
+        other => other.to_string(),
+    }
 }

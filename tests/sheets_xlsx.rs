@@ -17,14 +17,14 @@ fn reader() -> XlsxReader {
     XlsxReader::new(PathBuf::from(env!("CARGO_BIN_EXE_nudgewright-xlsx-child")))
 }
 
-/// A minimal .xlsx whose first sheet's XML is `sheet_data` (with any
+/// A minimal .xlsx, with cell style 1 formatting dates, whose first sheet's XML is `sheet_data` (with any
 /// `<dimension>` given before it).
 fn xlsx(dimension: &str, sheet_data: &str) -> Vec<u8> {
     let mut file = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
     let parts = [
         (
             "[Content_Types].xml",
-            r#"<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>"#.to_owned(),
+            r#"<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>"#.to_owned(),
         ),
         (
             "_rels/.rels",
@@ -36,7 +36,12 @@ fn xlsx(dimension: &str, sheet_data: &str) -> Vec<u8> {
         ),
         (
             "xl/_rels/workbook.xml.rels",
-            r#"<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>"#.to_owned(),
+            r#"<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>"#.to_owned(),
+        ),
+        (
+            "xl/styles.xml",
+            // Cell style 1 is Excel's built-in date format (number format 14).
+            r#"<?xml version="1.0" encoding="UTF-8"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="14" applyNumberFormat="1"/></cellXfs></styleSheet>"#.to_owned(),
         ),
         (
             "xl/worksheets/sheet1.xml",
@@ -129,4 +134,26 @@ async fn a_hijacked_parser_gets_no_secrets_and_cant_flood_the_server() {
     assert!(!child_env.contains("DATABASE_URL"), "{child_env}");
     assert!(matches!(flooded, Err(SheetError::Unreadable(_))), "{flooded:?}");
     std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[tokio::test]
+async fn a_date_cell_reads_as_an_iso_date() {
+    let sheet = [
+        row(1, &["Due date"]),
+        r#"<row r="2"><c r="A2" s="1"><v>46341</v></c></row>"#.to_owned(),
+    ]
+    .concat();
+
+    let cells = reader().cells(&xlsx("", &sheet)).await.unwrap();
+
+    assert_eq!(cells[1], ["2026-11-15"]);
+}
+
+#[tokio::test]
+async fn a_sheet_starting_at_column_b_keeps_its_columns() {
+    let sheet = r#"<row r="1"><c r="B1" t="inlineStr"><is><t>Name</t></is></c></row>"#;
+
+    let cells = reader().cells(&xlsx("", sheet)).await.unwrap();
+
+    assert_eq!(cells[0], ["", "Name"]);
 }
