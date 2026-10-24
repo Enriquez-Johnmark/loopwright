@@ -1,6 +1,6 @@
 # The engine lives in its own repository, and products pin it by tag
 
-Loopwright was built inside Kompleto, its first product, behind a one-way boundary that a CI check enforced (Kompleto ADR 0001). When the owner decided to build five more products, each in its own public repository for the portfolio, the engine moved to its own repository. Its history came with it (`git subtree split`), so its development stays visible.
+The engine (released as Loopwright, renamed Nudgewright on 2026-10-24) was built inside Kompleto, its first product, behind a one-way boundary that a CI check enforced (Kompleto ADR 0001). When the owner decided to build five more products, each in its own public repository for the portfolio, the engine moved to its own repository. Its history came with it (`git subtree split`), so its development stays visible.
 
 Each product depends on a tagged release (`tag = "v0.1.0"`). A product upgrades when it chooses, so an engine change made for one product can never break another.
 

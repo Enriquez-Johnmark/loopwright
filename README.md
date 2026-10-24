@@ -1,4 +1,4 @@
-# Loopwright
+# Nudgewright
 
 **A Rust engine for human-approved reminder loops.** A product drafts a message, a person approves exactly what they saw, the engine sends it exactly once (even if the server crashes mid-send), replies and bounces come back and stop the loop, and every step is audited and kept to one tenant.
 
@@ -67,7 +67,7 @@ Postgres is the only infrastructure: no Redis, no separate queue.
 loopwright = { version = "0.1.0", git = "https://github.com/Enriquez-Johnmark/loopwright", rev = "649a774efb417bf579d288b7892cbf10b065ae2f" }
 ```
 
-Run the engine's migrations next to your own (`loopwright::MIGRATOR.run(&pool)`), give it your pre-send rules by implementing `PreSendCheck`, and drive the loop from your scheduler. [`examples/approve_and_send.rs`](examples/approve_and_send.rs) is the whole loop in 40 lines:
+Run the engine's migrations next to your own (`nudgewright::MIGRATOR.run(&pool)`), give it your pre-send rules by implementing `PreSendCheck`, and drive the loop from your scheduler. [`examples/approve_and_send.rs`](examples/approve_and_send.rs) is the whole loop in 40 lines:
 
 ```rust
 let id = outbox.create_draft(tenant, &email).await?;
@@ -89,10 +89,12 @@ The rules for working on the engine (scope, safety rules, versions, commits) are
 
 ## History
 
-Loopwright was built inside Kompleto, its first product, and moved to its own repository once a second product needed it. Its git history goes back to its first commit there.
+Nudgewright was built inside Kompleto, its first product, and moved to its own repository once a second product needed it. Its git history goes back to its first commit there.
+
+It was released as **Loopwright** (v0.1.0) and renamed Nudgewright on 2026-10-24, before any outside use, because a US trademark application for "LOOPWRIGHT" covers closely related software.
 
 ## Licence
 
 [AGPL-3.0-only](LICENSE). You may use, study and change it; if you run a modified version as a network service, you must offer its source to that service's users.
 
-Contributions: the author also uses Loopwright in products that are not open source, so outside contributions can only be accepted with a contributor agreement. Please open an issue first.
+Contributions: the author also uses Nudgewright in products that are not open source, so outside contributions can only be accepted with a contributor agreement. Please open an issue first.

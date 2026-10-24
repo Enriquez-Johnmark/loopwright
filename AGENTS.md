@@ -1,8 +1,8 @@
 # AGENTS.md
 
-**Loopwright** is a reusable Rust engine for human-approved reminder loops: a product drafts a message, a person approves it, the outbox sends it exactly once (even across crashes), replies and bounces come back and stop the loop, and every step is audited and scoped to one tenant. It is AGPL-3.0-only.
+**Nudgewright** is a reusable Rust engine for human-approved reminder loops: a product drafts a message, a person approves it, the outbox sends it exactly once (even across crashes), replies and bounces come back and stop the loop, and every step is audited and scoped to one tenant. It is AGPL-3.0-only.
 
-Products depend on a release, naming its version and the commit its tag points to (`loopwright = { version = "X.Y.Z", git = "https://github.com/Enriquez-Johnmark/loopwright", rev = "<commit>" }`), so a moved tag can never change what a product builds. The first product is Kompleto (bookkeepers); Balanse, Kotasyon, Biyahe, Iskedyul and Resibo follow, each in its own repository.
+Products depend on a release, naming its version and the commit its tag points to (`nudgewright = { version = "X.Y.Z", git = "https://github.com/Enriquez-Johnmark/nudgewright", rev = "<commit>" }`), so a moved tag can never change what a product builds. The first product is Kompleto (bookkeepers); Balanse, Kotasyon, Biyahe, Iskedyul and Resibo follow, each in its own repository.
 
 ## What belongs here
 
@@ -43,7 +43,7 @@ The owner is the only developer: work directly on `main`. No branches, no pull r
 
 - **Coding happens in Claude Code on the web.** `scripts/cloud-session-start.sh` runs at session start (via `.claude/settings.json`), brings up Postgres and the pinned Rust, and applies the migrations. On a local machine it does nothing.
 - Locally: `docker compose up -d` starts Postgres 17; `cp .env.example .env` once (for `sqlx-cli`); `sqlx migrate run`; then `cargo test`.
-- The send-exactly-once crash test needs a real program to kill, so it lives in each product (Kompleto: `tests/e1_crash.rs`). Products enable it with their own `failpoints` feature, which turns on `loopwright/failpoints`; the crash point is chosen with `LOOPWRIGHT_FAILPOINT`.
+- The send-exactly-once crash test needs a real program to kill, so it lives in each product (Kompleto: `tests/e1_crash.rs`). Products enable it with their own `failpoints` feature, which turns on `nudgewright/failpoints`; the crash point is chosen with `NUDGEWRIGHT_FAILPOINT`.
 
 ## Scope
 
