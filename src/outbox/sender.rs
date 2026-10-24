@@ -463,10 +463,10 @@ fn backoff(attempt: i32) -> Duration {
 }
 
 /// Test-only crash point for the E1 test: aborts the process when
-/// `LOOPWRIGHT_FAILPOINT` names this point. Compiled out of normal builds.
+/// `NUDGEWRIGHT_FAILPOINT` names this point. Compiled out of normal builds.
 #[cfg(feature = "failpoints")]
 fn failpoint(name: &str) {
-    if std::env::var("LOOPWRIGHT_FAILPOINT").is_ok_and(|v| v == name) {
+    if std::env::var("NUDGEWRIGHT_FAILPOINT").is_ok_and(|v| v == name) {
         std::process::abort();
     }
 }

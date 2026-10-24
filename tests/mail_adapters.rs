@@ -3,7 +3,7 @@
 
 #![allow(clippy::unwrap_used, reason = "test code: a failed unwrap is a failed test")]
 
-use loopwright::mail::{Email, MailError, Mailer, MailpitMailer, ResendMailer};
+use nudgewright::mail::{Email, MailError, Mailer, MailpitMailer, ResendMailer};
 use secrecy::SecretString;
 use serde_json::json;
 use wiremock::matchers::{body_partial_json, header, method, path};

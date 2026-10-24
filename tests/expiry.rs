@@ -8,8 +8,8 @@ mod common;
 use std::sync::Arc;
 
 use common::{RecordingMailer, clock, sample_email};
-use loopwright::ids::TenantId;
-use loopwright::outbox::{MessageStatus, NoExtraChecks, Outbox, OutboxError, Sender};
+use nudgewright::ids::TenantId;
+use nudgewright::outbox::{MessageStatus, NoExtraChecks, Outbox, OutboxError, Sender};
 use sqlx::PgPool;
 use time::Duration;
 

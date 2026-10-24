@@ -4,8 +4,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use loopwright::clock::FixedClock;
-use loopwright::mail::{Email, MailError, Mailer, SendReceipt};
+use nudgewright::clock::FixedClock;
+use nudgewright::mail::{Email, MailError, Mailer, SendReceipt};
 use time::macros::datetime;
 
 /// A clock fixed at 2026-10-21 09:00 UTC; tests move it forward by hand.

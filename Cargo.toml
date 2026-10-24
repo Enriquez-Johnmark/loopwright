@@ -1,12 +1,12 @@
 [package]
-name = "loopwright"
+name = "nudgewright"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.99"
 publish = false
 license = "AGPL-3.0-only"
 description = "A durable engine for human-approved reminder loops: draft, approve, send exactly once, stop on reply, track"
-repository = "https://github.com/Enriquez-Johnmark/loopwright"
+repository = "https://github.com/Enriquez-Johnmark/nudgewright"
 readme = "README.md"
 
 [features]

@@ -8,17 +8,17 @@
 
 use std::sync::Arc;
 
-use loopwright::clock::{Clock, SystemClock};
-use loopwright::ids::TenantId;
-use loopwright::mail::{Email, MailpitMailer};
-use loopwright::outbox::{NoExtraChecks, Outbox, Sender};
+use nudgewright::clock::{Clock, SystemClock};
+use nudgewright::ids::TenantId;
+use nudgewright::mail::{Email, MailpitMailer};
+use nudgewright::outbox::{NoExtraChecks, Outbox, Sender};
 use sqlx::PgPool;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = std::env::var("DATABASE_URL")?;
     let pool = PgPool::connect(&url).await?;
-    loopwright::MIGRATOR.run(&pool).await?;
+    nudgewright::MIGRATOR.run(&pool).await?;
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let outbox = Outbox::new(pool.clone(), clock.clone());
 

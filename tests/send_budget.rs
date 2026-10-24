@@ -10,10 +10,10 @@ mod common;
 use std::sync::Arc;
 
 use common::{RecordingMailer, clock, sample_email};
-use loopwright::clock::Clock;
-use loopwright::ids::TenantId;
-use loopwright::mail::Email;
-use loopwright::outbox::{NoExtraChecks, Outbox, SendBudget, Sender};
+use nudgewright::clock::Clock;
+use nudgewright::ids::TenantId;
+use nudgewright::mail::Email;
+use nudgewright::outbox::{NoExtraChecks, Outbox, SendBudget, Sender};
 use sqlx::PgPool;
 use time::Duration;
 
@@ -21,7 +21,7 @@ use time::Duration;
 async fn approved(
     pool: &PgPool,
     outbox: &Outbox,
-    clock: &Arc<loopwright::clock::FixedClock>,
+    clock: &Arc<nudgewright::clock::FixedClock>,
     to: &str,
     days: Option<i64>,
 ) {

@@ -7,7 +7,7 @@ mod common;
 use std::collections::HashSet;
 
 use common::clock;
-use loopwright::jobs::{JobError, Jobs};
+use nudgewright::jobs::{JobError, Jobs};
 use serde_json::json;
 use sqlx::PgPool;
 use time::Duration;

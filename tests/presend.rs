@@ -9,9 +9,9 @@ mod common;
 use std::sync::Arc;
 
 use common::{RecordingMailer, clock, sample_email};
-use loopwright::ids::{MessageId, TenantId};
-use loopwright::mail::Email;
-use loopwright::outbox::{
+use nudgewright::ids::{MessageId, TenantId};
+use nudgewright::mail::Email;
+use nudgewright::outbox::{
     BoxFuture, CheckFailed, MessageStatus, NoExtraChecks, Outbox, OutboxError, PreSendCheck, Sender,
 };
 use sqlx::PgPool;

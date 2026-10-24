@@ -50,7 +50,7 @@ struct MailpitRequest<'a> {
 
 #[derive(Serialize)]
 struct Headers<'a> {
-    #[serde(rename = "X-Loopwright-Idempotency-Key")]
+    #[serde(rename = "X-Nudgewright-Idempotency-Key")]
     idempotency_key: &'a str,
 }
 

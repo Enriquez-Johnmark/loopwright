@@ -5,7 +5,7 @@
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use hmac::{Hmac, KeyInit, Mac};
-use loopwright::webhooks::{DeliveryEvent, Signature, parse, verified};
+use nudgewright::webhooks::{DeliveryEvent, Signature, parse, verified};
 use sha2::Sha256;
 use time::macros::datetime;
 

@@ -7,10 +7,10 @@ mod common;
 use std::sync::Arc;
 
 use common::{RecordingMailer, clock, sample_email};
-use loopwright::clock::FixedClock;
-use loopwright::ids::{MessageId, TenantId};
-use loopwright::mail::{Email, MailError};
-use loopwright::outbox::{MessageStatus, NoExtraChecks, Outbox, OutboxError, Sender};
+use nudgewright::clock::FixedClock;
+use nudgewright::ids::{MessageId, TenantId};
+use nudgewright::mail::{Email, MailError};
+use nudgewright::outbox::{MessageStatus, NoExtraChecks, Outbox, OutboxError, Sender};
 use sqlx::PgPool;
 use time::Duration;
 

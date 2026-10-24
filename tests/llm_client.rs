@@ -5,7 +5,7 @@
 
 use std::time::Duration;
 
-use loopwright::llm::{AnthropicClient, LanguageModel, LlmError, LlmRequest};
+use nudgewright::llm::{AnthropicClient, LanguageModel, LlmError, LlmRequest};
 use secrecy::SecretString;
 use serde_json::json;
 use wiremock::matchers::{body_partial_json, header, method, path};

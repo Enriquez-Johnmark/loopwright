@@ -2,9 +2,9 @@
 
 #![allow(clippy::unwrap_used, reason = "test code: a failed unwrap is a failed test")]
 
-use loopwright::cost_log::{self, LlmCall, Outcome};
-use loopwright::ids::TenantId;
-use loopwright::llm::Usage;
+use nudgewright::cost_log::{self, LlmCall, Outcome};
+use nudgewright::ids::TenantId;
+use nudgewright::llm::Usage;
 use sqlx::PgPool;
 use time::macros::datetime;
 

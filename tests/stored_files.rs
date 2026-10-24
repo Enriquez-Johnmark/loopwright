@@ -10,10 +10,10 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use common::clock;
-use loopwright::clock::FixedClock;
-use loopwright::files::{FileCipher, FileError, FileStore, Files, LocalDisk, MasterKey};
-use loopwright::ids::{FileId, TenantId};
-use loopwright::outbox::BoxFuture;
+use nudgewright::clock::FixedClock;
+use nudgewright::files::{FileCipher, FileError, FileStore, Files, LocalDisk, MasterKey};
+use nudgewright::ids::{FileId, TenantId};
+use nudgewright::outbox::BoxFuture;
 use sqlx::PgPool;
 use time::Duration;
 

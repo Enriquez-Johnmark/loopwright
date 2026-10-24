@@ -2,7 +2,7 @@
 
 #![allow(clippy::unwrap_used, reason = "test code: a failed unwrap is a failed test")]
 
-use loopwright::inbound::{InboundError, MAX_RAW_BYTES, parse};
+use nudgewright::inbound::{InboundError, MAX_RAW_BYTES, parse};
 
 fn sample(name: &str) -> Vec<u8> {
     let path = format!("{}/tests/fixtures/mail/{name}.eml", env!("CARGO_MANIFEST_DIR"));
@@ -79,5 +79,5 @@ fn g1_the_email_worker_and_the_app_agree_on_the_signature() {
     let raw = b"From: nena@example.test\r\nSubject: Re: docs\r\n\r\nHi po\r\n";
     let vector = "62c376e06f8b7a0bddc963a7c17ee0bf0170a0aabeacbc8dd582574788e4e950";
 
-    assert!(loopwright::inbound::signed(b"test-inbound-secret", raw, vector));
+    assert!(nudgewright::inbound::signed(b"test-inbound-secret", raw, vector));
 }

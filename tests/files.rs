@@ -3,8 +3,8 @@
 
 #![allow(clippy::unwrap_used, reason = "test code: a failed unwrap is a failed test")]
 
-use loopwright::files::{FileCipher, MasterKey};
-use loopwright::ids::{FileId, TenantId};
+use nudgewright::files::{FileCipher, MasterKey};
+use nudgewright::ids::{FileId, TenantId};
 
 fn cipher() -> FileCipher {
     FileCipher::new(&MasterKey::from_hex(&"ab".repeat(32)).unwrap())

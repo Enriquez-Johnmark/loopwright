@@ -1,4 +1,4 @@
-//! Loopwright: a durable engine for human-approved reminder loops. A
+//! Nudgewright: a durable engine for human-approved reminder loops. A
 //! product drafts a message; a person approves it; the outbox sends it
 //! exactly once, even across crashes; replies and bounces come back and
 //! stop the loop; every step is audited and scoped to one tenant.
@@ -23,5 +23,5 @@ pub mod tenants;
 pub mod webhooks;
 
 /// The engine's database tables. A product runs these before its own
-/// migrations, e.g. `loopwright::MIGRATOR.run(&pool).await?`.
+/// migrations, e.g. `nudgewright::MIGRATOR.run(&pool).await?`.
 pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
