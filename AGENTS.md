@@ -16,7 +16,10 @@ Each rule protects a guarantee products rely on. Where a tool can enforce a rule
 
 - **Read the `rust-best-practices` skill** (`.claude/skills/rust-best-practices`) before writing or reviewing Rust.
 - **Sending:** only `outbox` sends messages, and only an approved message whose content hash still matches what the approver saw, with an idempotency key recorded before the provider call. An outcome that is unknown (timeout, crash) is never retried on a provider that can't block duplicates.
-- **Tenant isolation:** every function that reads or writes tenant data takes a `TenantId`, and every query filters on it. The exceptions are system-wide workers (the outbox sender, the job runner, sweeps), which still name the row's tenant in every update.
+- **Tenant isolation:** every function that reads or writes tenant data takes a `TenantId`, and every query filters on it. The exceptions:
+  - system-wide workers (the outbox sender, the job runner, sweeps), which still name the row's tenant in every update;
+  - login, sessions and reopening a closed account (`accounts`), which find the tenant from an address or a secret before any tenant is known;
+  - sign-up requests, which belong to no tenant and are read only by the operator.
 - **Time:** read time only through the injected `Clock`. Direct system-clock calls are banned with clippy `disallowed-methods`. UUIDv7 IDs embed wall-clock time; they are identifiers only, never used to decide anything about time.
 - **Untrusted input:** model output, inbound email, webhooks and uploaded files are untrusted. Parse them into strict types, verify signatures before trusting a payload, and never echo them into commands or SQL.
 - **Agent safety lives in code, not prompts.** Approval gates, idempotent sends and bounded loops are enforced by the engine, never left to a model's instructions.
