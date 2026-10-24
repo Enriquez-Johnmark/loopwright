@@ -11,7 +11,7 @@ It powers a family of products for small businesses in the Philippines, each in 
 | Kotasyon ("quotation") | Leads, about quotes a service business sent | Planned |
 | Biyahe ("trip") | Travelers, about tour inquiries | Planned |
 | Iskedyul ("schedule") | Patients, about clinic and dental appointments | Planned |
-| Resibo ("receipt") | Online sellers, about their sales records and BIR deadlines | Planned |
+| Rekord ("record") | Online sellers, about their sales records and BIR deadlines | Planned |
 
 ## The loop
 
