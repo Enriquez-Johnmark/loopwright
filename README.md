@@ -55,6 +55,8 @@ flowchart LR
 | `jobs` | A Postgres job queue (`FOR UPDATE SKIP LOCKED`) with leases and retries |
 | `audit` | An append-only audit log, enforced by a database trigger |
 | `tenants` | Erasing one tenant's engine data |
+| `accounts` | Accounts and their owner and staff, one-time login links and sessions, operator-approved sign-up, and closing with a grace period before erasure (no pages: products keep their own) |
+| `sheets` | CSV and Excel files read into rows of text, with Excel parsed in a sandboxed child process |
 | `clock`, `ids`, `signed` | Injected time, typed IDs, signed links |
 
 Postgres is the only infrastructure: no Redis, no separate queue.
