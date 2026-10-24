@@ -9,6 +9,8 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use time::OffsetDateTime;
+
 use crate::ids::{MessageId, TenantId};
 use crate::mail::Email;
 
@@ -17,11 +19,20 @@ pub const MAX_BODY_CHARS: usize = 2_000;
 
 /// Why a message didn't pass, in words for the person who approved it.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum CheckFailed {
     /// The message breaks a rule; it must not go out as it is.
     Refused(String),
     /// The check itself couldn't run (say, a database timeout); try later.
     Unavailable(String),
+    /// The message is fine but may not go out before `until` (say, outside
+    /// sending hours). Approval goes ahead; sending waits until then.
+    NotUntil {
+        /// The earliest moment it may go out.
+        until: OffsetDateTime,
+        /// Why, for the person who approved it.
+        reason: String,
+    },
 }
 
 /// A boxed future, so checks can be shared as `dyn PreSendCheck`.

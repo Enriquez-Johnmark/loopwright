@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update outbox_messages set retry_at = $3, last_error = $4, updated_at = $5\n         where id = $1 and tenant_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "852fb3c8d848daf9550636be5c9eed497d610b8311ff3a0b180cfa7381ea6738"
+}

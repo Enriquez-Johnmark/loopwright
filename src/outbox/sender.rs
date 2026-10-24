@@ -279,7 +279,21 @@ impl<M: Mailer> Sender<M> {
                 // Not the message's fault: try again shortly, without
                 // counting an attempt.
                 report.failed += 1;
-                defer(tx, tenant, id, now + backoff(1), &reason).await?;
+                let why = format!("couldn't run the pre-send check: {reason}");
+                defer(tx, tenant, id, now, now + backoff(1), &why).await?;
+                return Ok(Claim::Refused);
+            }
+            Err(CheckFailed::NotUntil { until, reason }) => {
+                // Held, not failed: it isn't claimed again before `until`.
+                defer(
+                    tx,
+                    tenant,
+                    id,
+                    now,
+                    until.max(now + backoff(1)),
+                    &format!("waiting: {reason}"),
+                )
+                .await?;
                 return Ok(Claim::Refused);
             }
         }
@@ -476,22 +490,24 @@ fn failpoint(name: &str) {
 fn failpoint(_name: &str) {}
 
 /// Leaves a message for a later attempt after its pre-send check couldn't
-/// run. It stays approved, with its attempt count, so it can still be
-/// cancelled and still expires at its deadline.
+/// run, or said not yet. It stays approved, with its attempt count, so it
+/// can still be cancelled and still expires at its deadline.
 async fn defer(
     tx: &mut Transaction<'_, Postgres>,
     tenant: TenantId,
     id: MessageId,
+    now: OffsetDateTime,
     retry_at: OffsetDateTime,
-    reason: &str,
+    why: &str,
 ) -> Result<(), OutboxError> {
     sqlx::query!(
-        "update outbox_messages set retry_at = $3, last_error = $4, updated_at = $3
+        "update outbox_messages set retry_at = $3, last_error = $4, updated_at = $5
          where id = $1 and tenant_id = $2",
         id.as_uuid(),
         tenant.as_uuid(),
         retry_at,
-        format!("couldn't run the pre-send check: {reason}"),
+        why,
+        now,
     )
     .execute(&mut **tx)
     .await?;

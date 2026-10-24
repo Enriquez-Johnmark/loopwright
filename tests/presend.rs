@@ -183,3 +183,57 @@ async fn d7_a_check_that_couldnt_run_leaves_the_message_to_try_again(pool: PgPoo
         .unwrap();
     assert_eq!(mailer.calls().len(), 1);
 }
+
+/// A product rule that holds every message until a set time, as quiet
+/// hours would.
+struct NotBefore {
+    clock: Arc<nudgewright::clock::FixedClock>,
+    until: time::OffsetDateTime,
+}
+
+impl PreSendCheck for NotBefore {
+    fn check<'a>(&'a self, _: TenantId, _: MessageId, _: &'a Email) -> BoxFuture<'a, Result<(), CheckFailed>> {
+        use nudgewright::clock::Clock as _;
+        let result = if self.clock.now() < self.until {
+            Err(CheckFailed::NotUntil {
+                until: self.until,
+                reason: "outside sending hours".to_owned(),
+            })
+        } else {
+            Ok(())
+        };
+        Box::pin(async move { result })
+    }
+}
+
+#[sqlx::test]
+async fn d7_a_message_held_until_a_time_is_approved_and_sent_then_not_before(pool: PgPool) {
+    let clock = clock();
+    let holds = Arc::new(NotBefore {
+        clock: clock.clone(),
+        until: clock.now_plus(time::Duration::hours(3)),
+    });
+    let outbox = Outbox::new(pool.clone(), clock.clone());
+    let tenant = TenantId::new();
+    let id = outbox.create_draft(tenant, &sample_email()).await.unwrap();
+    let seen = outbox.get(tenant, id).await.unwrap().content_hash();
+    // Only the timing waits, so it can be approved now.
+    outbox
+        .approve(tenant, id, "ana@santos.test", &seen, holds.as_ref())
+        .await
+        .unwrap();
+    let mailer = RecordingMailer::idempotent();
+    let sender = Sender::new(pool, mailer.clone(), clock.clone(), holds);
+
+    sender.drain_once(10).await.unwrap();
+    clock.advance(time::Duration::hours(2));
+    let early = sender.drain_once(10).await.unwrap();
+    let held = outbox.get(tenant, id).await.unwrap();
+    clock.advance(time::Duration::hours(1));
+    sender.drain_once(10).await.unwrap();
+
+    assert_eq!(early, Default::default(), "not even claimed before its time");
+    assert_eq!(held.status, MessageStatus::Approved);
+    assert!(held.last_error.unwrap().contains("outside sending hours"));
+    assert_eq!(mailer.calls().len(), 1);
+}

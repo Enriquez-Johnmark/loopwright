@@ -346,12 +346,12 @@ impl Outbox {
         if checked.content_hash() != *seen {
             return Err(OutboxError::StaleApproval);
         }
-        checks::run(product_checks, tenant, id, &checked.email)
-            .await
-            .map_err(|failed| match failed {
-                CheckFailed::Refused(reason) => OutboxError::CheckFailed(reason),
-                CheckFailed::Unavailable(reason) => OutboxError::CheckUnavailable(reason),
-            })?;
+        match checks::run(product_checks, tenant, id, &checked.email).await {
+            // Only the timing waits; the sender holds it until then.
+            Ok(()) | Err(CheckFailed::NotUntil { .. }) => {}
+            Err(CheckFailed::Refused(reason)) => return Err(OutboxError::CheckFailed(reason)),
+            Err(CheckFailed::Unavailable(reason)) => return Err(OutboxError::CheckUnavailable(reason)),
+        }
         let now = self.clock.now();
         let mut tx = self.pool.begin().await?;
         let (status, current) = lock(&mut tx, tenant, id).await?;
