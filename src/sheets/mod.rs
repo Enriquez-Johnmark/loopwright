@@ -3,6 +3,10 @@
 //! file into cells, within size limits, without letting a crafted file take
 //! the server down.
 
+mod xlsx;
+
+pub use xlsx::{CHILD_COMMAND, XlsxReader, run_child};
+
 /// The largest file accepted, in bytes.
 pub const MAX_BYTES: usize = 2 * 1024 * 1024;
 /// The most non-blank rows read from a file, besides its header. Products
