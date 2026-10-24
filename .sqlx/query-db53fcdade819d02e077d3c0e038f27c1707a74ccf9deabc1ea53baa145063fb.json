@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select count(*) filter (where lower(to_address) = lower($2)) as \"to_address!\",\n                      count(*) as \"account!\"\n               from outbox_messages where tenant_id = $1 and approved_by = $4 and created_at > $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "to_address!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "account!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "db53fcdade819d02e077d3c0e038f27c1707a74ccf9deabc1ea53baa145063fb"
+}

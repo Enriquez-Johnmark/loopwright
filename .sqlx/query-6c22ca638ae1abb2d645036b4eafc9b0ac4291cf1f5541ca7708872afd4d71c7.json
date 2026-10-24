@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select s.tenant_id, s.member_id, m.email, m.role\n             from account_sessions s\n             join accounts a on a.tenant_id = s.tenant_id and a.closed_at is null\n             join account_members m on m.id = s.member_id and m.tenant_id = s.tenant_id\n             where s.session_hash = $1 and s.expires_at > $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tenant_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "account_sessions",
+            "name": "tenant_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "member_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "account_sessions",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "account_members",
+            "name": "email"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "role",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "account_members",
+            "name": "role"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6c22ca638ae1abb2d645036b4eafc9b0ac4291cf1f5541ca7708872afd4d71c7"
+}

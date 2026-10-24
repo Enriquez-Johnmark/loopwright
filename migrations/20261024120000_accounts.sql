@@ -28,3 +28,29 @@ create table account_members (
 -- An address logs in to one account only.
 create unique index account_members_email on account_members (lower(email));
 create unique index account_members_one_owner on account_members (tenant_id) where role = 'owner';
+
+-- Login links and sessions. Only SHA-256 hashes of the secrets are stored,
+-- so a database leak doesn't hand out working links or sessions. Both
+-- belong to a person and go with them.
+create table account_login_tokens (
+    token_hash  bytea primary key,
+    tenant_id   uuid not null,
+    member_id   uuid not null,
+    created_at  timestamptz not null,
+    expires_at  timestamptz not null,
+    used_at     timestamptz,
+    foreign key (member_id, tenant_id) references account_members (id, tenant_id) on delete cascade
+);
+
+create index account_login_tokens_member on account_login_tokens (member_id, created_at);
+
+create table account_sessions (
+    session_hash  bytea primary key,
+    tenant_id     uuid not null,
+    member_id     uuid not null,
+    created_at    timestamptz not null,
+    expires_at    timestamptz not null,
+    foreign key (member_id, tenant_id) references account_members (id, tenant_id) on delete cascade
+);
+
+create index account_sessions_member on account_sessions (member_id);

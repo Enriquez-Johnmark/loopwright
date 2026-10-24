@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update account_login_tokens t set used_at = $2\n             from accounts a, account_members m\n             where t.token_hash = $1 and t.used_at is null and t.expires_at > $2\n               and a.tenant_id = t.tenant_id and a.closed_at is null\n               and m.id = t.member_id and m.tenant_id = t.tenant_id\n             returning t.tenant_id, t.member_id, m.email",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tenant_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "account_login_tokens",
+            "name": "tenant_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "member_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "account_login_tokens",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "account_members",
+            "name": "email"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "77b909abf0b2314711ee18f409055caa3fcd8b878a6df7955bdae649b4b9434a"
+}
